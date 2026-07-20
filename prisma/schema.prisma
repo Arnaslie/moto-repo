@@ -1,0 +1,20 @@
+// Prisma schema for moto-repo — a social platform for motorcycle enthusiasts.
+// Docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Post {
+  id        String   @id @default(cuid())
+  author    String
+  content   String
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
