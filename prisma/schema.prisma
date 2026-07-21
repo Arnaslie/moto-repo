@@ -1,0 +1,35 @@
+// Prisma schema for moto-repo — a social platform for motorcycle enthusiasts.
+// Docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Post {
+  id        String   @id @default(cuid())
+  author    String
+  content   String
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+// A rider's most recent shared position. One row per rider handle — we upsert
+// on each update rather than keeping a full history (keeps the "live" query
+// trivial). `sharing = false` means the rider has gone invisible.
+model Location {
+  id        String   @id @default(cuid())
+  rider     String   @unique
+  lat       Float
+  lng       Float
+  accuracy  Float?
+  sharing   Boolean  @default(true)
+  updatedAt DateTime @updatedAt
+
+  @@index([updatedAt])
+}
