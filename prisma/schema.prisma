@@ -18,3 +18,18 @@ model Post {
 
   @@index([createdAt])
 }
+
+// A rider's most recent shared position. One row per rider handle — we upsert
+// on each update rather than keeping a full history (keeps the "live" query
+// trivial). `sharing = false` means the rider has gone invisible.
+model Location {
+  id        String   @id @default(cuid())
+  rider     String   @unique
+  lat       Float
+  lng       Float
+  accuracy  Float?
+  sharing   Boolean  @default(true)
+  updatedAt DateTime @updatedAt
+
+  @@index([updatedAt])
+}
