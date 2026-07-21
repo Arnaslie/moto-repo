@@ -5,7 +5,13 @@ import type { Post } from "@/lib/types";
 
 const MAX_CONTENT_LENGTH = 500;
 
-export function Composer({ onPosted }: { onPosted: (post: Post) => void }) {
+export function Composer({
+  onPosted,
+  currentUser,
+}: {
+  onPosted: (post: Post) => void;
+  currentUser: { handle: string } | null;
+}) {
   const [author, setAuthor] = useState("");
   const [content, setContent] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -44,14 +50,20 @@ export function Composer({ onPosted }: { onPosted: (post: Post) => void }) {
       onSubmit={handleSubmit}
       className="border-b border-black/10 px-4 py-4 dark:border-white/10"
     >
-      <input
-        type="text"
-        value={author}
-        onChange={(e) => setAuthor(e.target.value)}
-        placeholder="Your handle (optional)"
-        maxLength={40}
-        className="mb-2 w-full bg-transparent text-sm font-medium text-black/70 outline-none placeholder:text-black/30 dark:text-white/70 dark:placeholder:text-white/30"
-      />
+      {currentUser ? (
+        <p className="mb-2 text-sm font-medium text-black/60 dark:text-white/60">
+          Posting as <span className="text-orange-500">@{currentUser.handle}</span>
+        </p>
+      ) : (
+        <input
+          type="text"
+          value={author}
+          onChange={(e) => setAuthor(e.target.value)}
+          placeholder="Your handle (optional)"
+          maxLength={40}
+          className="mb-2 w-full bg-transparent text-sm font-medium text-black/70 outline-none placeholder:text-black/30 dark:text-white/70 dark:placeholder:text-white/30"
+        />
+      )}
       <textarea
         value={content}
         onChange={(e) => setContent(e.target.value)}
