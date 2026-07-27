@@ -42,9 +42,21 @@ export function PostCard({ post }: { post: Post }) {
             · {timeAgo(post.createdAt)}
           </span>
         </div>
-        <p className="mt-1 whitespace-pre-wrap break-words text-[15px] leading-relaxed">
-          {post.content}
-        </p>
+        {post.content && (
+          <p className="mt-1 whitespace-pre-wrap break-words text-[15px] leading-relaxed">
+            {post.content}
+          </p>
+        )}
+        {post.imageUrl && (
+          // Plain img: user-uploaded content served from /uploads at runtime.
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={post.imageUrl}
+            alt="Post attachment"
+            loading="lazy"
+            className="mt-2 max-h-[32rem] w-full rounded-xl border border-black/10 object-cover dark:border-white/10"
+          />
+        )}
       </div>
     </article>
   );
