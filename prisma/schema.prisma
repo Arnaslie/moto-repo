@@ -16,6 +16,11 @@ model Post {
   content   String
   createdAt DateTime @default(now())
 
+  // Optional link to a real account. Kept nullable + `author` denormalized so
+  // legacy/seeded posts (and anonymous posts) still render.
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id])
+
   @@index([createdAt])
 }
 
@@ -32,4 +37,55 @@ model Location {
   updatedAt DateTime @updatedAt
 
   @@index([updatedAt])
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  handle       String   @unique
+  displayName  String?
+  bio          String?
+  passwordHash String
+  // Base avatar skin tone (hex). Equipped gear layers on top of this.
+  avatarSkin   String   @default("#c68642")
+  createdAt    DateTime @default(now())
+
+  posts Post[]
+  gear  UserGear[]
+}
+
+// Catalog of cosmetic gear. `id` is a stable slug so seeds are idempotent.
+// `asset` maps to a drawing in the SVG shape registry (no binary assets).
+model GearItem {
+  id      String  @id
+  slot    String // helmet | jacket | visor | background
+  name    String
+  brand   String?
+  rarity  String  @default("common")
+  asset   String
+  color   String?
+  // Granted to every new account on signup (the free starter set).
+  starter Boolean @default(false)
+
+  owners UserGear[]
+
+  @@index([slot])
+}
+
+// A user's ownership of a gear item, plus whether it's currently equipped.
+// At most one equipped item per slot is enforced in application logic.
+model UserGear {
+  id         String   @id @default(cuid())
+  userId     String
+  gearItemId String
+  equipped   Boolean  @default(false)
+  // How it was acquired: starter today; "code" once brand redemption lands.
+  source     String   @default("starter")
+  acquiredAt DateTime @default(now())
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  gearItem GearItem @relation(fields: [gearItemId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, gearItemId])
+  @@index([userId])
 }

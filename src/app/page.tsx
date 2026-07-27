@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { Feed } from "@/components/Feed";
 import { SiteHeader } from "@/components/SiteHeader";
+import { getCurrentUser } from "@/lib/session";
 import type { Post } from "@/lib/types";
 
 // Always render fresh from the database.
@@ -18,10 +19,13 @@ export default async function Home() {
     createdAt: p.createdAt.toISOString(),
   }));
 
+  const user = await getCurrentUser();
+  const headerUser = user ? { handle: user.handle, displayName: user.displayName } : null;
+
   return (
     <main className="mx-auto min-h-screen w-full max-w-xl border-x border-black/10 dark:border-white/10">
-      <SiteHeader />
-      <Feed initialPosts={initialPosts} />
+      <SiteHeader user={headerUser} />
+      <Feed initialPosts={initialPosts} currentUser={user ? { handle: user.handle } : null} />
     </main>
   );
 }

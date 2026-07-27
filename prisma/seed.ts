@@ -1,4 +1,6 @@
 import { PrismaClient } from "@prisma/client";
+// Relative import (not the "@/" alias) so `tsx prisma/seed.ts` resolves it.
+import { STARTER_CATALOG } from "../src/lib/gear";
 
 const prisma = new PrismaClient();
 
@@ -25,10 +27,41 @@ const samplePosts = [
   },
 ];
 
+async function seedGearCatalog() {
+  for (const item of STARTER_CATALOG) {
+    await prisma.gearItem.upsert({
+      where: { id: item.id },
+      create: {
+        id: item.id,
+        slot: item.slot,
+        name: item.name,
+        brand: item.brand ?? null,
+        rarity: item.rarity,
+        asset: item.asset,
+        color: item.color ?? null,
+        starter: item.starter,
+      },
+      update: {
+        slot: item.slot,
+        name: item.name,
+        brand: item.brand ?? null,
+        rarity: item.rarity,
+        asset: item.asset,
+        color: item.color ?? null,
+        starter: item.starter,
+      },
+    });
+  }
+  console.log(`Upserted ${STARTER_CATALOG.length} gear items.`);
+}
+
 async function main() {
+  // Catalog is idempotent — always keep it in sync.
+  await seedGearCatalog();
+
   const count = await prisma.post.count();
   if (count > 0) {
-    console.log(`Database already has ${count} posts — skipping seed.`);
+    console.log(`Database already has ${count} posts — skipping post seed.`);
     return;
   }
 

@@ -5,7 +5,13 @@ import type { Post } from "@/lib/types";
 import { Composer } from "./Composer";
 import { PostCard } from "./PostCard";
 
-export function Feed({ initialPosts }: { initialPosts: Post[] }) {
+export function Feed({
+  initialPosts,
+  currentUser,
+}: {
+  initialPosts: Post[];
+  currentUser: { handle: string } | null;
+}) {
   const [posts, setPosts] = useState<Post[]>(initialPosts);
 
   function handlePosted(post: Post) {
@@ -14,7 +20,7 @@ export function Feed({ initialPosts }: { initialPosts: Post[] }) {
 
   return (
     <div>
-      <Composer onPosted={handlePosted} />
+      <Composer onPosted={handlePosted} currentUser={currentUser} />
       {posts.length === 0 ? (
         <p className="px-4 py-10 text-center text-black/40 dark:text-white/40">
           No posts yet. Be the first to share a ride.
