@@ -54,8 +54,24 @@ model User {
   avatarSkin   String   @default("#c68642")
   createdAt    DateTime @default(now())
 
-  posts Post[]
-  gear  UserGear[]
+  posts       Post[]
+  gear        UserGear[]
+  motorcycles Motorcycle[]
+}
+
+// A bike in a rider's garage, shown on their profile.
+model Motorcycle {
+  id        String   @id @default(cuid())
+  userId    String
+  year      Int
+  make      String
+  model     String
+  nickname  String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 // Catalog of cosmetic gear. `id` is a stable slug so seeds are idempotent.
