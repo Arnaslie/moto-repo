@@ -5,6 +5,7 @@ import { SiteHeader } from "@/components/SiteHeader";
 import { Avatar, type EquippedItem } from "@/components/Avatar";
 import { AvatarCustomizer, type OwnedItem } from "@/components/AvatarCustomizer";
 import { PostCard } from "@/components/PostCard";
+import { Garage } from "@/components/Garage";
 import type { SlotKey, Rarity } from "@/lib/gear";
 
 export const dynamic = "force-dynamic";
@@ -21,6 +22,7 @@ export default async function ProfilePage({
     include: {
       gear: { include: { gearItem: true } },
       posts: { orderBy: { createdAt: "desc" } },
+      motorcycles: { orderBy: { createdAt: "asc" } },
     },
   });
   if (!user) notFound();
@@ -95,6 +97,17 @@ export default async function ProfilePage({
           />
         </>
       )}
+
+      <Garage
+        bikes={user.motorcycles.map((m) => ({
+          id: m.id,
+          year: m.year,
+          make: m.make,
+          model: m.model,
+          nickname: m.nickname,
+        }))}
+        canEdit={isOwner}
+      />
 
       <div>
         {user.posts.length === 0 ? (
