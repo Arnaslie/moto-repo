@@ -2,16 +2,18 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/session";
 import { isValidUploadUrl } from "@/lib/uploads";
+import { postInclude, serializePost } from "@/lib/posts";
 
 const MAX_CONTENT_LENGTH = 500;
 const MAX_AUTHOR_LENGTH = 40;
 
 // GET /api/posts — newest posts first.
 export async function GET() {
-  const posts = await prisma.post.findMany({
+  const rows = await prisma.post.findMany({
     orderBy: { createdAt: "desc" },
+    include: postInclude,
   });
-  return NextResponse.json({ posts });
+  return NextResponse.json({ posts: rows.map(serializePost) });
 }
 
 // POST /api/posts — create a new post.
@@ -81,7 +83,8 @@ export async function POST(request: Request) {
       imageUrl: resolvedImageUrl,
       userId: currentUser?.id ?? null,
     },
+    include: postInclude,
   });
 
-  return NextResponse.json({ post }, { status: 201 });
+  return NextResponse.json({ post: serializePost(post) }, { status: 201 });
 }

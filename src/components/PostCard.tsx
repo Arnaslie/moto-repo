@@ -1,7 +1,9 @@
+import Link from "next/link";
 import type { Post } from "@/lib/types";
 import { timeAgo } from "@/lib/format";
+import { Avatar } from "./Avatar";
 
-// A subtle deterministic accent color per author, so avatars feel distinct.
+// Fallback accent color per author for anonymous/legacy posts without an avatar.
 const AVATAR_COLORS = [
   "bg-orange-500",
   "bg-amber-500",
@@ -21,20 +23,41 @@ function avatarColor(author: string): string {
 
 export function PostCard({ post }: { post: Post }) {
   const initial = post.author.trim().charAt(0).toUpperCase() || "?";
+  const profileHref = post.avatar ? `/profile/${post.author}` : null;
+
+  const avatar = post.avatar ? (
+    <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full ring-1 ring-black/10 dark:ring-white/10">
+      <Avatar skin={post.avatar.skin} equipped={post.avatar.equipped} size={40} />
+    </div>
+  ) : (
+    <div
+      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold text-white ${avatarColor(
+        post.author,
+      )}`}
+      aria-hidden
+    >
+      {initial}
+    </div>
+  );
 
   return (
     <article className="flex gap-3 border-b border-black/10 px-4 py-4 dark:border-white/10">
-      <div
-        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold text-white ${avatarColor(
-          post.author,
-        )}`}
-        aria-hidden
-      >
-        {initial}
-      </div>
+      {profileHref ? (
+        <Link href={profileHref} aria-label={`@${post.author}'s profile`}>
+          {avatar}
+        </Link>
+      ) : (
+        avatar
+      )}
       <div className="min-w-0 flex-1">
         <div className="flex items-baseline gap-2">
-          <span className="truncate font-semibold">@{post.author}</span>
+          {profileHref ? (
+            <Link href={profileHref} className="truncate font-semibold hover:underline">
+              @{post.author}
+            </Link>
+          ) : (
+            <span className="truncate font-semibold">@{post.author}</span>
+          )}
           <span
             className="text-sm text-black/50 dark:text-white/50"
             suppressHydrationWarning
