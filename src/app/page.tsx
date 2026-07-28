@@ -16,6 +16,7 @@ export default async function Home() {
     id: p.id,
     author: p.author,
     content: p.content,
+    imageUrl: p.imageUrl,
     createdAt: p.createdAt.toISOString(),
   }));
 

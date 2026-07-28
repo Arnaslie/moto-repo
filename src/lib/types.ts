@@ -3,5 +3,6 @@ export type Post = {
   id: string;
   author: string;
   content: string;
+  imageUrl: string | null;
   createdAt: string;
 };

@@ -109,6 +109,7 @@ export default async function ProfilePage({
                 id: post.id,
                 author: post.author,
                 content: post.content,
+                imageUrl: post.imageUrl,
                 createdAt: post.createdAt.toISOString(),
               }}
             />

@@ -16,6 +16,10 @@ model Post {
   content   String
   createdAt DateTime @default(now())
 
+  // Optional attached image, stored as a local path under /uploads (the bytes
+  // live on disk in public/uploads, not in the DB).
+  imageUrl String?
+
   // Optional link to a real account. Kept nullable + `author` denormalized so
   // legacy/seeded posts (and anonymous posts) still render.
   userId String?
