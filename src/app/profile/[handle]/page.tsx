@@ -111,6 +111,8 @@ export default async function ProfilePage({
                 content: post.content,
                 imageUrl: post.imageUrl,
                 createdAt: post.createdAt.toISOString(),
+                // All posts here belong to this profile's user.
+                avatar: { skin: user.avatarSkin, equipped },
               }}
             />
           ))

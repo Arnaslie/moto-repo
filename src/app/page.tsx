@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { Feed } from "@/components/Feed";
 import { SiteHeader } from "@/components/SiteHeader";
 import { getCurrentUser } from "@/lib/session";
-import type { Post } from "@/lib/types";
+import { postInclude, serializePost } from "@/lib/posts";
 
 // Always render fresh from the database.
 export const dynamic = "force-dynamic";
@@ -10,15 +10,10 @@ export const dynamic = "force-dynamic";
 export default async function Home() {
   const rows = await prisma.post.findMany({
     orderBy: { createdAt: "desc" },
+    include: postInclude,
   });
 
-  const initialPosts: Post[] = rows.map((p) => ({
-    id: p.id,
-    author: p.author,
-    content: p.content,
-    imageUrl: p.imageUrl,
-    createdAt: p.createdAt.toISOString(),
-  }));
+  const initialPosts = rows.map(serializePost);
 
   const user = await getCurrentUser();
   const headerUser = user ? { handle: user.handle, displayName: user.displayName } : null;
