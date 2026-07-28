@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   COMMON_MAKES,
@@ -115,16 +116,24 @@ export function Garage({
                 </p>
               )}
             </div>
-            {canEdit && (
-              <button
-                type="button"
-                onClick={() => removeBike(bike.id)}
-                aria-label={`Remove ${bike.year} ${bike.make} ${bike.model}`}
-                className="shrink-0 rounded-full px-2 py-1 text-sm text-black/40 transition-colors hover:bg-rose-500/10 hover:text-rose-500 dark:text-white/40"
+            <div className="flex shrink-0 items-center gap-1">
+              <Link
+                href={`/showroom/${bike.id}`}
+                className="rounded-full px-3 py-1 text-sm font-medium text-orange-500 transition-colors hover:bg-orange-500/10"
               >
-                Remove
-              </button>
-            )}
+                Showroom
+              </Link>
+              {canEdit && (
+                <button
+                  type="button"
+                  onClick={() => removeBike(bike.id)}
+                  aria-label={`Remove ${bike.year} ${bike.make} ${bike.model}`}
+                  className="rounded-full px-2 py-1 text-sm text-black/40 transition-colors hover:bg-rose-500/10 hover:text-rose-500 dark:text-white/40"
+                >
+                  Remove
+                </button>
+              )}
+            </div>
           </li>
         ))}
       </ul>
