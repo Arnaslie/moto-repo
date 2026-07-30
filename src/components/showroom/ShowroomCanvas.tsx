@@ -4,7 +4,7 @@ import { useRef } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { ContactShadows, OrbitControls } from "@react-three/drei";
 import type { Group } from "three";
-import { Motorcycle } from "./Motorcycle";
+import { BikeModel } from "./BikeModel";
 
 // A deterministic paint color per bike so each looks distinct.
 function colorForBike(seed: string): string {
@@ -25,7 +25,7 @@ function Turntable({ color }: { color: string }) {
 
   return (
     <group ref={ref}>
-      <Motorcycle bodyColor={color} />
+      <BikeModel bodyColor={color} />
       {/* platform */}
       <mesh position={[0, 0.05, 0]} receiveShadow>
         <cylinderGeometry args={[2.4, 2.6, 0.1, 64]} />
