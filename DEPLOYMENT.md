@@ -13,9 +13,16 @@ serverless deploy:
 | Concern | Local (today) | Serverless-ready (Vercel) |
 | --- | --- | --- |
 | Database | SQLite file (`prisma/dev.db`) | Hosted Postgres |
-| Image uploads | `public/uploads/` on disk | Object storage (Blob/S3) |
+| Image uploads | `./uploads/` on disk, served by the `/media/[file]` route | Object storage (Blob/S3) |
 
 Both were deliberately isolated so the swap is small.
+
+> Note: uploads are **not** static-served from `public/` — Next only reliably
+> serves `public/` files that existed at build time, so runtime uploads 404'd.
+> They live in a private `./uploads/` dir and are streamed by a route handler
+> (`src/app/media/[file]/route.ts`). That read path works locally and on a
+> persistent host, but on serverless the write side still needs object storage
+> (the FS is ephemeral) — see Option A.
 
 ---
 
@@ -54,9 +61,12 @@ Best Next.js DX and edge network. Requires the two storage swaps. ~Half a day.
 
 ### 2. Image uploads: local FS → object storage
 - Rewrite **only** `saveUpload()` in `src/lib/uploads.ts` to push bytes to
-  **Vercel Blob** (`@vercel/blob`) / S3 / Cloudinary and return the public URL.
-- Everything calling `saveUpload()` stays unchanged. Also relax
-  `isValidUploadUrl()` (or store full URLs) once images live off-origin.
+  **Vercel Blob** (`@vercel/blob`) / S3 / Cloudinary and return the URL.
+- If the store serves images directly, have `saveUpload()` return the full
+  object URL and drop the `/media` route (delete `readUpload()` +
+  `src/app/media/[file]/route.ts`); or keep `/media` as a proxy and point
+  `readUpload()` at the bucket. Relax `isValidUploadUrl()` accordingly.
+- Everything calling `saveUpload()` stays unchanged.
 
 ### 3. Build config
 - Add a Prisma generate step (there is no `postinstall` today):
@@ -79,10 +89,10 @@ Best Next.js DX and edge network. Requires the two storage swaps. ~Half a day.
 
 ## Option B — Persistent host (fastest to ship, minimal change)
 
-Railway / Render / Fly.io with a mounted volume. SQLite + `public/uploads`
+Railway / Render / Fly.io with a mounted volume. SQLite + the `./uploads/` dir
 keep working **as-is** because the filesystem persists.
 
-- Attach a persistent volume; ensure `prisma/dev.db` and `public/uploads/`
+- Attach a persistent volume; ensure `prisma/dev.db` and `./uploads/`
   live on it.
 - Set `SESSION_SECRET` (and `DATABASE_URL="file:./prisma/dev.db"` or similar).
 - Run `prisma migrate deploy` on boot/release.
@@ -101,5 +111,8 @@ which is why Prisma was chosen from the start.
 ## Isolated swap points (where the work actually is)
 
 - `prisma/schema.prisma` — datasource provider
-- `src/lib/uploads.ts` — `saveUpload()` (storage backend) + `isValidUploadUrl()`
+- `src/lib/uploads.ts` — `saveUpload()` (storage backend), `readUpload()`
+  (serving), `isValidUploadUrl()`
+- `src/app/media/[file]/route.ts` — the upload-serving route (proxy or removed
+  when the store serves images directly)
 - `package.json` — build/generate/migrate scripts
