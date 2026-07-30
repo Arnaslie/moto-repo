@@ -38,9 +38,9 @@ yarn-error.log*
 /prisma/*.db
 /prisma/*.db-journal
 
-# user-uploaded images (keep the folder, ignore its contents)
-/public/uploads/*
-!/public/uploads/.gitkeep
+# user-uploaded images, served via the /media route (keep folder, ignore contents)
+/uploads/*
+!/uploads/.gitkeep
 
 # vercel
 .vercel
