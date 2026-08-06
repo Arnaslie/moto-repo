@@ -24,3 +24,58 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* ---------------------------------------------------------------------------
+   Comment ticker — the ESPN-style bottom line on each post card.
+
+   The track holds two identical copies of the comment list. Translating it by
+   -50% moves it exactly one copy's width, so the second copy lands where the
+   first started and the loop is seamless. Duration is set per-ticker via the
+   --ticker-duration custom property (written from JS after measuring), which
+   keeps the crawl at a constant px/sec no matter how many comments there are.
+--------------------------------------------------------------------------- */
+@keyframes ticker-scroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.ticker-track {
+  animation: ticker-scroll var(--ticker-duration, 30s) linear infinite;
+  will-change: transform;
+}
+
+/* Pause so it can actually be read: on hover, while keyboard focus is inside,
+   while the thread is open, and whenever the post is scrolled out of view (so
+   a long feed isn't animating dozens of off-screen strips). */
+.ticker-shell:hover .ticker-track,
+.ticker-shell:focus-within .ticker-track,
+.ticker-shell[data-expanded="true"] .ticker-track,
+.ticker-shell[data-offscreen="true"] .ticker-track {
+  animation-play-state: paused;
+}
+
+/* Content already fits — a strip that crawls when there's nothing to scroll
+   past just looks broken. Set from JS after measuring. */
+.ticker-shell[data-static="true"] .ticker-track {
+  animation: none;
+}
+.ticker-shell[data-static="true"] [data-ticker-copy="duplicate"] {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* No crawl at all — the strip becomes a plain horizontally scrollable list. */
+  .ticker-track {
+    animation: none;
+  }
+  .ticker-viewport {
+    overflow-x: auto;
+  }
+  [data-ticker-copy="duplicate"] {
+    display: none;
+  }
+}

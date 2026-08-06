@@ -6,6 +6,7 @@ import { Avatar, type EquippedItem } from "@/components/Avatar";
 import { AvatarCustomizer, type OwnedItem } from "@/components/AvatarCustomizer";
 import { PostCard } from "@/components/PostCard";
 import { Garage } from "@/components/Garage";
+import { commentsInclude, serializeComment } from "@/lib/posts";
 import type { SlotKey, Rarity } from "@/lib/gear";
 
 export const dynamic = "force-dynamic";
@@ -21,7 +22,7 @@ export default async function ProfilePage({
     where: { handle: handle.toLowerCase() },
     include: {
       gear: { include: { gearItem: true } },
-      posts: { orderBy: { createdAt: "desc" } },
+      posts: { orderBy: { createdAt: "desc" }, include: commentsInclude },
       motorcycles: { orderBy: { createdAt: "asc" } },
     },
   });
@@ -126,7 +127,11 @@ export default async function ProfilePage({
                 createdAt: post.createdAt.toISOString(),
                 // All posts here belong to this profile's user.
                 avatar: { skin: user.avatarSkin, equipped },
+                // Query takes the newest first; flip for chronological crawl.
+                comments: [...post.comments].reverse().map(serializeComment),
+                commentCount: post._count.comments,
               }}
+              currentUser={viewer ? { handle: viewer.handle } : null}
             />
           ))
         )}

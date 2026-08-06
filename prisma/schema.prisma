@@ -25,7 +25,27 @@ model Post {
   userId String?
   user   User?   @relation(fields: [userId], references: [id])
 
+  comments Comment[]
+
   @@index([createdAt])
+}
+
+// A reply on a post, shown in the scrolling ticker along the bottom of the
+// post card. Unlike Post, `userId` is required — commenting needs an account.
+// `author` is still denormalized to match Post and to keep ticker rendering
+// cheap (no join needed for the collapsed strip).
+model Comment {
+  id        String   @id @default(cuid())
+  postId    String
+  userId    String
+  author    String
+  content   String
+  createdAt DateTime @default(now())
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([postId, createdAt])
 }
 
 // A rider's most recent shared position. One row per rider handle — we upsert
@@ -55,6 +75,7 @@ model User {
   createdAt    DateTime @default(now())
 
   posts       Post[]
+  comments    Comment[]
   gear        UserGear[]
   motorcycles Motorcycle[]
 }
