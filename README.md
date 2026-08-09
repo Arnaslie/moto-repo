@@ -10,6 +10,9 @@ live map of riders sharing their position. Backed by SQLite via
 ## Features
 
 - **Feed** — post text, an image, or both. Signed-out visitors can still post anonymously.
+- **Comment ticker** — comments run along the bottom of each post as an ESPN-style
+  broadcast bottom line, crawling right-to-left. Click the strip to freeze it and expand
+  the full thread with a reply box. Commenting requires an account.
 - **Accounts** — email + handle signup, password hashing with `bcryptjs`, sessions in an
   encrypted cookie via `iron-session`.
 - **Rider avatars** — layered SVG paper-doll drawn in code (no binary assets), customizable
@@ -63,6 +66,7 @@ src/
     media/[file]/route.ts        # serves user uploads at request time
     api/
       posts/                     # GET (list) + POST (create)
+      posts/[id]/comments/       # GET the thread, POST a comment
       uploads/                   # POST an image, returns its /media URL
       auth/{signup,login,logout}/
       avatar/                    # POST: save skin + equipped gear
@@ -70,6 +74,7 @@ src/
       locations/                 # GET riders sharing, POST your position
   components/
     Feed.tsx · Composer.tsx · PostCard.tsx
+    CommentTicker.tsx                     # scrolling comment strip + thread
     Avatar.tsx · AvatarCustomizer.tsx     # SVG paper-doll + slot picker
     Garage.tsx · showroom/                # bikes + three.js canvas
     RiderMap.tsx · RidersView.tsx         # Leaflet (dynamic import, no SSR)
@@ -79,7 +84,8 @@ src/
     auth.ts · gear.ts · motorcycles.ts · locations.ts · format.ts
     posts.ts · types.ts
 prisma/
-  schema.prisma                  # Post, User, GearItem, UserGear, Motorcycle, Location
+  schema.prisma                  # Post, Comment, User, GearItem, UserGear,
+                                 #   Motorcycle, Location
   seed.ts                        # gear catalog + sample posts
 ```
 
@@ -92,6 +98,7 @@ React, or Prisma — so a future mobile client can share them as-is.
 | Model        | What it holds                                                          |
 | ------------ | ---------------------------------------------------------------------- |
 | `Post`       | Author, content, optional `imageUrl`, optional link to a `User`        |
+| `Comment`    | A reply on a post — always tied to a real `User`                       |
 | `User`       | Email, handle, password hash, bio, avatar skin tone                    |
 | `GearItem`   | Cosmetic catalog entry — slot, name, brand, rarity, SVG asset key      |
 | `UserGear`   | Who owns which gear item, and whether it's equipped                    |
@@ -136,5 +143,5 @@ the app as-is.
 
 ## Next ideas
 
-Comments, likes, tags/hashtags, feed pagination, real `.glb` models in the showroom, and
-the brand code redemption flow for gear.
+Likes, deleting your own comments, tags/hashtags, feed pagination, real `.glb` models in
+the showroom, and the brand code redemption flow for gear.
