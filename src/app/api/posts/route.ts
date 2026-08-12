@@ -9,9 +9,10 @@ const MAX_AUTHOR_LENGTH = 40;
 
 // GET /api/posts — newest posts first.
 export async function GET() {
+  const viewer = await getCurrentUser();
   const rows = await prisma.post.findMany({
     orderBy: { createdAt: "desc" },
-    include: postInclude,
+    include: postInclude(viewer?.id),
   });
   return NextResponse.json({ posts: rows.map(serializePost) });
 }
@@ -83,7 +84,7 @@ export async function POST(request: Request) {
       imageUrl: resolvedImageUrl,
       userId: currentUser?.id ?? null,
     },
-    include: postInclude,
+    include: postInclude(currentUser?.id),
   });
 
   return NextResponse.json({ post: serializePost(post) }, { status: 201 });

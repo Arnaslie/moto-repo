@@ -31,4 +31,8 @@ export type Post = {
   // crawls chronologically. `commentCount` is the true total.
   comments: Comment[];
   commentCount: number;
+  waveCount: number;
+  // Whether the rider asking for this post has waved at it. Always false for
+  // signed-out readers, so it's viewer-specific — see postInclude().
+  waved: boolean;
 };

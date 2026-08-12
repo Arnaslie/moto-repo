@@ -11,24 +11,34 @@ const authorInclude = {
   },
 } as const;
 
-// Comments ride along with the post so the ticker can render immediately, with
-// no round-trip. Bounded to the newest few; the thread fetches the rest on
-// demand when it's expanded.
-export const commentsInclude = {
-  comments: {
-    take: TICKER_COMMENT_LIMIT,
-    orderBy: { createdAt: "desc" },
-    include: { user: { include: authorInclude } },
-  },
-  _count: { select: { comments: true } },
-} as const;
-
-// Prisma `include` for loading a post together with its author's equipped gear.
-// Shared so every query that feeds serializePost() selects the same shape.
-export const postInclude = {
-  user: { include: authorInclude },
-  ...commentsInclude,
-} as const;
+// Prisma `include` for loading a post together with its author's equipped gear,
+// its newest comments, and its wave tally. Shared so every query that feeds
+// serializePost() selects the same shape.
+//
+// Unlike the other includes here this one is viewer-specific: whether a post is
+// already waved at depends on who's asking, so callers pass the signed-in
+// rider's id (or nothing, for signed-out readers).
+export function postInclude(viewerId?: string | null) {
+  return {
+    user: { include: authorInclude },
+    // Comments ride along with the post so the ticker can render immediately,
+    // with no round-trip. Bounded to the newest few; the thread fetches the
+    // rest on demand when it's expanded.
+    comments: {
+      take: TICKER_COMMENT_LIMIT,
+      orderBy: { createdAt: "desc" },
+      include: { user: { include: authorInclude } },
+    },
+    // The viewer's own wave, if they've left one — at most a single row, given
+    // the unique [postId, userId] pair. Signed-out readers get an id that can
+    // never match, which keeps this one query shape instead of two.
+    waves: {
+      where: { userId: viewerId ?? "" },
+      select: { id: true },
+    },
+    _count: { select: { comments: true, waves: true } },
+  } as const;
+}
 
 // The subset of a row that the serializers need. Kept as structural types so
 // callers can pass Prisma results directly.
@@ -53,7 +63,8 @@ type PostRow = {
   createdAt: Date;
   user: AuthorRow;
   comments: CommentRow[];
-  _count: { comments: number };
+  waves: { id: string }[];
+  _count: { comments: number; waves: number };
 };
 
 export function authorAvatar(user: AuthorRow): PostAuthorAvatar | null {
@@ -90,5 +101,8 @@ export function serializePost(post: PostRow): Post {
     // in chronological order as it crawls.
     comments: [...post.comments].reverse().map(serializeComment),
     commentCount: post._count.comments,
+    waveCount: post._count.waves,
+    // The query only ever selects the viewer's own wave, so any row means yes.
+    waved: post.waves.length > 0,
   };
 }

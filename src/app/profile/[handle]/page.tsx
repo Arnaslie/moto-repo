@@ -6,7 +6,7 @@ import { Avatar, type EquippedItem } from "@/components/Avatar";
 import { AvatarCustomizer, type OwnedItem } from "@/components/AvatarCustomizer";
 import { PostCard } from "@/components/PostCard";
 import { Garage } from "@/components/Garage";
-import { commentsInclude, serializeComment } from "@/lib/posts";
+import { postInclude, serializePost } from "@/lib/posts";
 import type { SlotKey, Rarity } from "@/lib/gear";
 
 export const dynamic = "force-dynamic";
@@ -18,17 +18,23 @@ export default async function ProfilePage({
 }) {
   const { handle } = await params;
 
+  // Ahead of the profile query: the posts below are loaded with the same
+  // viewer-aware include the feed uses, so waves show up already flipped.
+  const viewer = await getCurrentUser();
+
   const user = await prisma.user.findUnique({
     where: { handle: handle.toLowerCase() },
     include: {
       gear: { include: { gearItem: true } },
-      posts: { orderBy: { createdAt: "desc" }, include: commentsInclude },
+      posts: {
+        orderBy: { createdAt: "desc" },
+        include: postInclude(viewer?.id),
+      },
       motorcycles: { orderBy: { createdAt: "asc" } },
     },
   });
   if (!user) notFound();
 
-  const viewer = await getCurrentUser();
   const isOwner = viewer?.id === user.id;
   const headerUser = viewer
     ? { handle: viewer.handle, displayName: viewer.displayName }
@@ -119,18 +125,7 @@ export default async function ProfilePage({
           user.posts.map((post) => (
             <PostCard
               key={post.id}
-              post={{
-                id: post.id,
-                author: post.author,
-                content: post.content,
-                imageUrl: post.imageUrl,
-                createdAt: post.createdAt.toISOString(),
-                // All posts here belong to this profile's user.
-                avatar: { skin: user.avatarSkin, equipped },
-                // Query takes the newest first; flip for chronological crawl.
-                comments: [...post.comments].reverse().map(serializeComment),
-                commentCount: post._count.comments,
-              }}
+              post={serializePost(post)}
               currentUser={viewer ? { handle: viewer.handle } : null}
             />
           ))

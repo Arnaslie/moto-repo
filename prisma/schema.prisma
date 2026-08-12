@@ -26,8 +26,26 @@ model Post {
   user   User?   @relation(fields: [userId], references: [id])
 
   comments Comment[]
+  waves    Wave[]
 
   @@index([createdAt])
+}
+
+// A rider's wave on a post — this app's "like". Named after the two-finger
+// salute riders give each other on the road. One row per rider per post; the
+// unique pair below is what makes waving idempotent, so a double tap or an
+// offline retry can't inflate the count.
+model Wave {
+  id        String   @id @default(cuid())
+  postId    String
+  userId    String
+  createdAt DateTime @default(now())
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+  @@index([postId])
 }
 
 // A reply on a post, shown in the scrolling ticker along the bottom of the
@@ -76,6 +94,7 @@ model User {
 
   posts       Post[]
   comments    Comment[]
+  waves       Wave[]
   gear        UserGear[]
   motorcycles Motorcycle[]
 }
