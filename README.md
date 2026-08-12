@@ -10,6 +10,10 @@ live map of riders sharing their position. Backed by SQLite via
 ## Features
 
 - **Feed** — post text, an image, or both. Signed-out visitors can still post anonymously.
+- **Waves** — this app's like, drawn as the two-finger salute riders give each other on the
+  road: an outlined hand that fills orange and tips left-right when you wave. One wave per
+  rider per post, enforced by a unique pair in the database, so a double tap can't inflate
+  the count. Waving requires an account; the tally is public.
 - **Comment ticker** — comments run along the bottom of each post as an ESPN-style
   broadcast bottom line, crawling right-to-left. Click the strip to freeze it and expand
   the full thread with a reply box. Commenting requires an account.
@@ -67,6 +71,7 @@ src/
     api/
       posts/                     # GET (list) + POST (create)
       posts/[id]/comments/       # GET the thread, POST a comment
+      posts/[id]/waves/          # POST to wave, DELETE to take it back
       uploads/                   # POST an image, returns its /media URL
       auth/{signup,login,logout}/
       avatar/                    # POST: save skin + equipped gear
@@ -74,6 +79,8 @@ src/
       locations/                 # GET riders sharing, POST your position
   components/
     Feed.tsx · Composer.tsx · PostCard.tsx
+    PostFooter.tsx                        # action row + ticker (shared state)
+    WaveButton.tsx · icons.tsx            # the wave hand, optimistic toggle
     CommentTicker.tsx                     # scrolling comment strip + thread
     Avatar.tsx · AvatarCustomizer.tsx     # SVG paper-doll + slot picker
     Garage.tsx · showroom/                # bikes + three.js canvas
@@ -143,5 +150,5 @@ the app as-is.
 
 ## Next ideas
 
-Likes, deleting your own comments, tags/hashtags, feed pagination, real `.glb` models in
-the showroom, and the brand code redemption flow for gear.
+Deleting your own comments, tags/hashtags, feed pagination, a list of who waved at a post,
+real `.glb` models in the showroom, and the brand code redemption flow for gear.
