@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { ANONYMOUS_WAVES_ENABLED } from "@/lib/waves";
 import { WaveIcon } from "./icons";
 
 // Shared between the real button and the signed-out link so the two are
@@ -26,8 +27,10 @@ export function WaveButton({
   const [celebrating, setCelebrating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Signed-out riders still see the tally — they just get sent to sign in.
-  if (!currentUser) {
+  // Signed-out riders still see the tally. Normally they get sent to sign in;
+  // while anonymous waves are on they wave like everyone else, under a guest id
+  // the server keeps in a cookie.
+  if (!currentUser && !ANONYMOUS_WAVES_ENABLED) {
     return (
       <Link
         href="/login"

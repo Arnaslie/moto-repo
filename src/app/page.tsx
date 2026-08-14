@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { Feed } from "@/components/Feed";
 import { SiteHeader } from "@/components/SiteHeader";
-import { getCurrentUser } from "@/lib/session";
+import { getCurrentUser, getWaveViewer } from "@/lib/session";
 import { postInclude, serializePost } from "@/lib/posts";
 
 // Always render fresh from the database.
@@ -14,7 +14,7 @@ export default async function Home() {
 
   const rows = await prisma.post.findMany({
     orderBy: { createdAt: "desc" },
-    include: postInclude(user?.id),
+    include: postInclude(await getWaveViewer(user)),
   });
 
   const initialPosts = rows.map(serializePost);

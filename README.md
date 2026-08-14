@@ -13,7 +13,9 @@ live map of riders sharing their position. Backed by SQLite via
 - **Waves** — this app's like, drawn as the two-finger salute riders give each other on the
   road: an outlined hand that fills orange and tips left-right when you wave. One wave per
   rider per post, enforced by a unique pair in the database, so a double tap can't inflate
-  the count. Waving requires an account; the tally is public.
+  the count. Waving normally requires an account, but
+  `NEXT_PUBLIC_ALLOW_ANONYMOUS_WAVES` temporarily opens it to signed-out visitors, who
+  wave under a random id kept in a cookie. The tally is public either way.
 - **Comment ticker** — comments run along the bottom of each post as an ESPN-style
   broadcast bottom line, crawling right-to-left. Click the strip to freeze it and expand
   the full thread with a reply box. Commenting requires an account.
@@ -39,12 +41,13 @@ npm run db:seed        # gear catalog (idempotent) + sample posts
 npm run dev            # http://localhost:3000
 ```
 
-`.env` needs two values, both documented in `.env.example`:
+`.env` needs two values, both documented in `.env.example`, plus one optional toggle:
 
-| Variable         | Notes                                                        |
-| ---------------- | ------------------------------------------------------------ |
-| `DATABASE_URL`   | SQLite file path, relative to `prisma/`                      |
-| `SESSION_SECRET` | Cookie encryption key, **must be ≥ 32 characters** or startup throws |
+| Variable                             | Notes                                                        |
+| ------------------------------------ | ------------------------------------------------------------ |
+| `DATABASE_URL`                       | SQLite file path, relative to `prisma/`                      |
+| `SESSION_SECRET`                     | Cookie encryption key, **must be ≥ 32 characters** or startup throws |
+| `NEXT_PUBLIC_ALLOW_ANONYMOUS_WAVES`  | Optional. `"true"` lets signed-out visitors wave; unset requires an account. Inlined at build time |
 
 ## Stack
 
@@ -89,9 +92,9 @@ src/
   lib/
     prisma.ts · session.ts · uploads.ts   # server-only
     auth.ts · gear.ts · motorcycles.ts · locations.ts · format.ts
-    posts.ts · types.ts
+    posts.ts · types.ts · waves.ts     # waves.ts: the anonymous-wave toggle
 prisma/
-  schema.prisma                  # Post, Comment, User, GearItem, UserGear,
+  schema.prisma                  # Post, Wave, Comment, User, GearItem, UserGear,
                                  #   Motorcycle, Location
   seed.ts                        # gear catalog + sample posts
 ```
@@ -105,6 +108,7 @@ React, or Prisma — so a future mobile client can share them as-is.
 | Model        | What it holds                                                          |
 | ------------ | ---------------------------------------------------------------------- |
 | `Post`       | Author, content, optional `imageUrl`, optional link to a `User`        |
+| `Wave`       | A wave on a post — from a `User`, or a cookie `guestId` when anonymous |
 | `Comment`    | A reply on a post — always tied to a real `User`                       |
 | `User`       | Email, handle, password hash, bio, avatar skin tone                    |
 | `GearItem`   | Cosmetic catalog entry — slot, name, brand, rarity, SVG asset key      |

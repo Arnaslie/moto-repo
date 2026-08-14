@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { getCurrentUser } from "@/lib/session";
+import { getCurrentUser, getWaveViewer } from "@/lib/session";
 import { SiteHeader } from "@/components/SiteHeader";
 import { Avatar, type EquippedItem } from "@/components/Avatar";
 import { AvatarCustomizer, type OwnedItem } from "@/components/AvatarCustomizer";
@@ -21,6 +21,7 @@ export default async function ProfilePage({
   // Ahead of the profile query: the posts below are loaded with the same
   // viewer-aware include the feed uses, so waves show up already flipped.
   const viewer = await getCurrentUser();
+  const waveViewer = await getWaveViewer(viewer);
 
   const user = await prisma.user.findUnique({
     where: { handle: handle.toLowerCase() },
@@ -28,7 +29,7 @@ export default async function ProfilePage({
       gear: { include: { gearItem: true } },
       posts: {
         orderBy: { createdAt: "desc" },
-        include: postInclude(viewer?.id),
+        include: postInclude(waveViewer),
       },
       motorcycles: { orderBy: { createdAt: "asc" } },
     },

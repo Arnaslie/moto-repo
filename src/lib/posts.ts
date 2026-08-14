@@ -1,6 +1,7 @@
 import type { Comment, Post, PostAuthorAvatar } from "./types";
 import type { SlotKey } from "./gear";
 import { TICKER_COMMENT_LIMIT } from "./comments";
+import type { WaveViewer } from "./waves";
 
 // Prisma `include` for an author together with their equipped gear — the data
 // the Avatar component needs. Shared by posts and comments.
@@ -11,14 +12,22 @@ const authorInclude = {
   },
 } as const;
 
+// Matches the one wave this viewer could have left. An account wins over a
+// guest cookie; with neither, `id: ""` matches nothing (cuids are never empty).
+function viewerWaveFilter(viewer?: WaveViewer | null) {
+  if (viewer?.userId) return { userId: viewer.userId };
+  if (viewer?.guestId) return { guestId: viewer.guestId };
+  return { id: "" };
+}
+
 // Prisma `include` for loading a post together with its author's equipped gear,
 // its newest comments, and its wave tally. Shared so every query that feeds
 // serializePost() selects the same shape.
 //
 // Unlike the other includes here this one is viewer-specific: whether a post is
-// already waved at depends on who's asking, so callers pass the signed-in
-// rider's id (or nothing, for signed-out readers).
-export function postInclude(viewerId?: string | null) {
+// already waved at depends on who's asking, so callers pass what getWaveViewer()
+// hands them (or nothing, for readers with neither an account nor a guest id).
+export function postInclude(viewer?: WaveViewer | null) {
   return {
     user: { include: authorInclude },
     // Comments ride along with the post so the ticker can render immediately,
@@ -30,10 +39,10 @@ export function postInclude(viewerId?: string | null) {
       include: { user: { include: authorInclude } },
     },
     // The viewer's own wave, if they've left one — at most a single row, given
-    // the unique [postId, userId] pair. Signed-out readers get an id that can
-    // never match, which keeps this one query shape instead of two.
+    // the unique pairs on Wave. A reader with no identity at all gets a filter
+    // that can never match, which keeps this one query shape instead of two.
     waves: {
-      where: { userId: viewerId ?? "" },
+      where: viewerWaveFilter(viewer),
       select: { id: true },
     },
     _count: { select: { comments: true, waves: true } },
