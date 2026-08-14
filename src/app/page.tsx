@@ -3,6 +3,7 @@ import { Feed } from "@/components/Feed";
 import { SiteHeader } from "@/components/SiteHeader";
 import { getCurrentUser, getWaveViewer } from "@/lib/session";
 import { postInclude, serializePost } from "@/lib/posts";
+import { blobUploadsEnabled } from "@/lib/uploads";
 
 // Always render fresh from the database.
 export const dynamic = "force-dynamic";
@@ -24,7 +25,11 @@ export default async function Home() {
   return (
     <main className="mx-auto min-h-screen w-full max-w-xl border-x border-black/10 dark:border-white/10">
       <SiteHeader user={headerUser} />
-      <Feed initialPosts={initialPosts} currentUser={user ? { handle: user.handle } : null} />
+      <Feed
+        initialPosts={initialPosts}
+        currentUser={user ? { handle: user.handle } : null}
+        blobUploads={blobUploadsEnabled()}
+      />
     </main>
   );
 }

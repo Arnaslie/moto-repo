@@ -6,7 +6,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -40,8 +40,9 @@ model Post {
 // anonymous-waves toggle (NEXT_PUBLIC_ALLOW_ANONYMOUS_WAVES): a signed-out
 // visitor is identified by a random id in a cookie, so their wave persists and
 // can be taken back, but it isn't tied to any account. Both columns are
-// nullable because SQLite treats NULLs as distinct in a unique index — that's
-// what lets many signed-in rows share `guestId = NULL` and vice versa.
+// nullable because a unique index treats NULLs as distinct — that's what lets
+// many signed-in rows share `guestId = NULL` and vice versa. (True of Postgres
+// as it was of SQLite: NULLS DISTINCT is the default.)
 model Wave {
   id        String   @id @default(cuid())
   postId    String

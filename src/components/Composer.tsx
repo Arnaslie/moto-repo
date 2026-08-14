@@ -7,12 +7,28 @@ const MAX_CONTENT_LENGTH = 500;
 const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
 const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 
+// Blob keys the served content-type off the pathname, and the name comes from
+// whatever the rider picked off their disk — so strip it down to something
+// harmless. A random suffix gets appended server-side, so collisions are fine.
+function blobPathname(name: string): string {
+  const cleaned = name
+    .split(/[\\/]/)
+    .pop()!
+    .toLowerCase()
+    .replace(/[^a-z0-9.-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(-64);
+  return `posts/${cleaned || "image.jpg"}`;
+}
+
 export function Composer({
   onPosted,
   currentUser,
+  blobUploads,
 }: {
   onPosted: (post: Post) => void;
   currentUser: { handle: string } | null;
+  blobUploads: boolean;
 }) {
   const [author, setAuthor] = useState("");
   const [content, setContent] = useState("");
@@ -59,7 +75,18 @@ export function Composer({
     try {
       // Upload the image first (if any), then create the post with its URL.
       let imageUrl: string | null = null;
-      if (file) {
+      if (file && blobUploads) {
+        // Straight from the browser to Blob — the file never passes through a
+        // function, so nothing caps it at 4.5 MB. Loaded on demand to keep the
+        // SDK out of the feed bundle when we're running on disk instead.
+        const { upload } = await import("@vercel/blob/client");
+        const blob = await upload(blobPathname(file.name), file, {
+          access: "public",
+          handleUploadUrl: "/api/uploads/token",
+          contentType: file.type,
+        });
+        imageUrl = blob.url;
+      } else if (file) {
         const form = new FormData();
         form.append("file", file);
         const uploadRes = await fetch("/api/uploads", { method: "POST", body: form });
