@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 import type { Comment } from "@/lib/types";
 import { MAX_COMMENT_LENGTH, truncateForTicker } from "@/lib/comments";
 import { timeAgo } from "@/lib/format";
 import { Avatar } from "./Avatar";
+import { ChatIcon } from "./icons";
 
 // Crawl speed in CSS pixels per second. The animation duration is derived from
 // this and the measured content width, so a post with two comments scrolls at
@@ -16,43 +17,33 @@ const SPEED_PX_PER_SEC = 60;
 const useIsomorphicLayoutEffect =
   typeof window !== "undefined" ? useLayoutEffect : useEffect;
 
-function ChatIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      width="14"
-      height="14"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 8.5 8.5 0 0 1-3.8-.9L3 20.5l1.6-4.9A8.4 8.4 0 0 1 12 3.1a8.4 8.4 0 0 1 9 8.4Z" />
-    </svg>
-  );
-}
-
+// The scrolling strip and the thread it opens. The comment tally and the
+// open/closed state are owned by PostFooter, which shares them with the action
+// row above — this component reports changes up rather than keeping its own.
 export function CommentTicker({
   postId,
   comments: initialComments,
-  commentCount: initialCount,
+  commentCount: total,
+  onCountChange,
+  expanded,
+  onExpandedChange,
+  threadId,
   currentUser,
 }: {
   postId: string;
   comments: Comment[];
   commentCount: number;
+  onCountChange: (count: number) => void;
+  expanded: boolean;
+  onExpandedChange: (expanded: boolean) => void;
+  threadId: string;
   currentUser: { handle: string } | null;
 }) {
   const shellRef = useRef<HTMLButtonElement>(null);
   const viewportRef = useRef<HTMLSpanElement>(null);
   const copyRef = useRef<HTMLSpanElement>(null);
-  const threadId = useId();
 
   const [comments, setComments] = useState<Comment[]>(initialComments);
-  const [total, setTotal] = useState(initialCount);
-  const [expanded, setExpanded] = useState(false);
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
   const [loadingAll, setLoadingAll] = useState(false);
@@ -111,8 +102,9 @@ export function CommentTicker({
       const res = await fetch(`/api/posts/${postId}/comments`);
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error ?? "Couldn't load the thread.");
-      setComments(data.comments as Comment[]);
-      setTotal((data.comments as Comment[]).length);
+      const all = data.comments as Comment[];
+      setComments(all);
+      onCountChange(all.length);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn't load the thread.");
     } finally {
@@ -136,7 +128,7 @@ export function CommentTicker({
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error ?? "Couldn't post that comment.");
       setComments((prev) => [...prev, data.comment as Comment]);
-      setTotal((n) => n + 1);
+      onCountChange(total + 1);
       setDraft("");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn't post that comment.");
@@ -166,7 +158,7 @@ export function CommentTicker({
       <button
         ref={shellRef}
         type="button"
-        onClick={() => setExpanded((v) => !v)}
+        onClick={() => onExpandedChange(!expanded)}
         aria-expanded={expanded}
         aria-controls={threadId}
         aria-label={
@@ -179,9 +171,9 @@ export function CommentTicker({
         data-expanded={expanded}
         className="ticker-shell flex w-full items-stretch bg-black/[0.03] text-left text-sm transition-colors hover:bg-black/[0.06] dark:bg-white/[0.04] dark:hover:bg-white/[0.07]"
       >
-        <span className="flex shrink-0 items-center gap-1.5 bg-orange-500 px-3 py-2 text-xs font-bold tabular-nums text-white">
+        {/* Icon only — the tally lives in the action row above. */}
+        <span className="flex shrink-0 items-center bg-orange-500 px-3 py-2 text-white">
           <ChatIcon />
-          {total}
         </span>
 
         {/* Spans, not divs — this all lives inside a <button>, which only

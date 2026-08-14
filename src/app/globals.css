@@ -26,6 +26,40 @@ body {
 }
 
 /* ---------------------------------------------------------------------------
+   The wave — the hand tips left, then right, then settles, the way a rider's
+   does coming off the clutch. Runs once when you wave, never when you take it
+   back (nobody celebrates that).
+--------------------------------------------------------------------------- */
+@keyframes wave-salute {
+  0% {
+    transform: rotate(0deg) scale(1);
+  }
+  28% {
+    transform: rotate(-16deg) scale(1.12);
+  }
+  55% {
+    transform: rotate(11deg) scale(1.12);
+  }
+  78% {
+    transform: rotate(-6deg) scale(1.04);
+  }
+  100% {
+    transform: rotate(0deg) scale(1);
+  }
+}
+
+.wave-salute {
+  display: inline-block;
+  animation: wave-salute 620ms cubic-bezier(0.3, 1.4, 0.5, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wave-salute {
+    animation: none;
+  }
+}
+
+/* ---------------------------------------------------------------------------
    Comment ticker — the ESPN-style bottom line on each post card.
 
    The track holds two identical copies of the comment list. Translating it by

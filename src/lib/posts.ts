@@ -1,6 +1,7 @@
 import type { Comment, Post, PostAuthorAvatar } from "./types";
 import type { SlotKey } from "./gear";
 import { TICKER_COMMENT_LIMIT } from "./comments";
+import type { WaveViewer } from "./waves";
 
 // Prisma `include` for an author together with their equipped gear — the data
 // the Avatar component needs. Shared by posts and comments.
@@ -11,24 +12,42 @@ const authorInclude = {
   },
 } as const;
 
-// Comments ride along with the post so the ticker can render immediately, with
-// no round-trip. Bounded to the newest few; the thread fetches the rest on
-// demand when it's expanded.
-export const commentsInclude = {
-  comments: {
-    take: TICKER_COMMENT_LIMIT,
-    orderBy: { createdAt: "desc" },
-    include: { user: { include: authorInclude } },
-  },
-  _count: { select: { comments: true } },
-} as const;
+// Matches the one wave this viewer could have left. An account wins over a
+// guest cookie; with neither, `id: ""` matches nothing (cuids are never empty).
+function viewerWaveFilter(viewer?: WaveViewer | null) {
+  if (viewer?.userId) return { userId: viewer.userId };
+  if (viewer?.guestId) return { guestId: viewer.guestId };
+  return { id: "" };
+}
 
-// Prisma `include` for loading a post together with its author's equipped gear.
-// Shared so every query that feeds serializePost() selects the same shape.
-export const postInclude = {
-  user: { include: authorInclude },
-  ...commentsInclude,
-} as const;
+// Prisma `include` for loading a post together with its author's equipped gear,
+// its newest comments, and its wave tally. Shared so every query that feeds
+// serializePost() selects the same shape.
+//
+// Unlike the other includes here this one is viewer-specific: whether a post is
+// already waved at depends on who's asking, so callers pass what getWaveViewer()
+// hands them (or nothing, for readers with neither an account nor a guest id).
+export function postInclude(viewer?: WaveViewer | null) {
+  return {
+    user: { include: authorInclude },
+    // Comments ride along with the post so the ticker can render immediately,
+    // with no round-trip. Bounded to the newest few; the thread fetches the
+    // rest on demand when it's expanded.
+    comments: {
+      take: TICKER_COMMENT_LIMIT,
+      orderBy: { createdAt: "desc" },
+      include: { user: { include: authorInclude } },
+    },
+    // The viewer's own wave, if they've left one — at most a single row, given
+    // the unique pairs on Wave. A reader with no identity at all gets a filter
+    // that can never match, which keeps this one query shape instead of two.
+    waves: {
+      where: viewerWaveFilter(viewer),
+      select: { id: true },
+    },
+    _count: { select: { comments: true, waves: true } },
+  } as const;
+}
 
 // The subset of a row that the serializers need. Kept as structural types so
 // callers can pass Prisma results directly.
@@ -53,7 +72,8 @@ type PostRow = {
   createdAt: Date;
   user: AuthorRow;
   comments: CommentRow[];
-  _count: { comments: number };
+  waves: { id: string }[];
+  _count: { comments: number; waves: number };
 };
 
 export function authorAvatar(user: AuthorRow): PostAuthorAvatar | null {
@@ -90,5 +110,8 @@ export function serializePost(post: PostRow): Post {
     // in chronological order as it crawls.
     comments: [...post.comments].reverse().map(serializeComment),
     commentCount: post._count.comments,
+    waveCount: post._count.waves,
+    // The query only ever selects the viewer's own wave, so any row means yes.
+    waved: post.waves.length > 0,
   };
 }

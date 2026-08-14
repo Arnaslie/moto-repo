@@ -1,21 +1,24 @@
 import { prisma } from "@/lib/prisma";
 import { Feed } from "@/components/Feed";
 import { SiteHeader } from "@/components/SiteHeader";
-import { getCurrentUser } from "@/lib/session";
+import { getCurrentUser, getWaveViewer } from "@/lib/session";
 import { postInclude, serializePost } from "@/lib/posts";
 
 // Always render fresh from the database.
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
+  // The viewer comes first: which posts they've already waved at is part of the
+  // feed query, not something the client patches in afterwards.
+  const user = await getCurrentUser();
+
   const rows = await prisma.post.findMany({
     orderBy: { createdAt: "desc" },
-    include: postInclude,
+    include: postInclude(await getWaveViewer(user)),
   });
 
   const initialPosts = rows.map(serializePost);
 
-  const user = await getCurrentUser();
   const headerUser = user ? { handle: user.handle, displayName: user.displayName } : null;
 
   return (

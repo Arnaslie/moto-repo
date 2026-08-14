@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { Post } from "@/lib/types";
 import { timeAgo } from "@/lib/format";
 import { Avatar } from "./Avatar";
-import { CommentTicker } from "./CommentTicker";
+import { PostFooter } from "./PostFooter";
 
 // Fallback accent color per author for anonymous/legacy posts without an avatar.
 const AVATAR_COLORS = [
@@ -49,7 +49,7 @@ export function PostCard({
 
   return (
     <article className="border-b border-black/10 dark:border-white/10">
-      <div className="flex gap-3 px-4 py-4">
+      <div className="flex gap-3 px-4 pb-3 pt-4">
         {profileHref ? (
           <Link href={profileHref} aria-label={`@${post.author}'s profile`}>
             {avatar}
@@ -91,12 +91,7 @@ export function PostCard({
         </div>
       </div>
 
-      <CommentTicker
-        postId={post.id}
-        comments={post.comments}
-        commentCount={post.commentCount}
-        currentUser={currentUser}
-      />
+      <PostFooter post={post} currentUser={currentUser} />
     </article>
   );
 }

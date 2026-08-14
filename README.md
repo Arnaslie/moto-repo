@@ -10,6 +10,15 @@ live map of riders sharing their position. Backed by SQLite via
 ## Features
 
 - **Feed** — post text, an image, or both. Signed-out visitors can still post anonymously.
+- **Waves** — this app's like, drawn as the two-finger salute riders give each other on the
+  road: an outlined hand that fills orange and tips left-right when you wave. One wave per
+  rider per post, enforced by a unique pair in the database, so a double tap can't inflate
+  the count. Waving normally requires an account, but
+  `NEXT_PUBLIC_ALLOW_ANONYMOUS_WAVES` temporarily opens it to signed-out visitors, who
+  wave under a random id kept in a cookie. The tally is public either way.
+- **Comment ticker** — comments run along the bottom of each post as an ESPN-style
+  broadcast bottom line, crawling right-to-left. Click the strip to freeze it and expand
+  the full thread with a reply box. Commenting requires an account.
 - **Accounts** — email + handle signup, password hashing with `bcryptjs`, sessions in an
   encrypted cookie via `iron-session`.
 - **Rider avatars** — layered SVG paper-doll drawn in code (no binary assets), customizable
@@ -32,12 +41,13 @@ npm run db:seed        # gear catalog (idempotent) + sample posts
 npm run dev            # http://localhost:3000
 ```
 
-`.env` needs two values, both documented in `.env.example`:
+`.env` needs two values, both documented in `.env.example`, plus one optional toggle:
 
-| Variable         | Notes                                                        |
-| ---------------- | ------------------------------------------------------------ |
-| `DATABASE_URL`   | SQLite file path, relative to `prisma/`                      |
-| `SESSION_SECRET` | Cookie encryption key, **must be ≥ 32 characters** or startup throws |
+| Variable                             | Notes                                                        |
+| ------------------------------------ | ------------------------------------------------------------ |
+| `DATABASE_URL`                       | SQLite file path, relative to `prisma/`                      |
+| `SESSION_SECRET`                     | Cookie encryption key, **must be ≥ 32 characters** or startup throws |
+| `NEXT_PUBLIC_ALLOW_ANONYMOUS_WAVES`  | Optional. `"true"` lets signed-out visitors wave; unset requires an account. Inlined at build time |
 
 ## Stack
 
@@ -63,6 +73,8 @@ src/
     media/[file]/route.ts        # serves user uploads at request time
     api/
       posts/                     # GET (list) + POST (create)
+      posts/[id]/comments/       # GET the thread, POST a comment
+      posts/[id]/waves/          # POST to wave, DELETE to take it back
       uploads/                   # POST an image, returns its /media URL
       auth/{signup,login,logout}/
       avatar/                    # POST: save skin + equipped gear
@@ -70,6 +82,9 @@ src/
       locations/                 # GET riders sharing, POST your position
   components/
     Feed.tsx · Composer.tsx · PostCard.tsx
+    PostFooter.tsx                        # action row + ticker (shared state)
+    WaveButton.tsx · icons.tsx            # the wave hand, optimistic toggle
+    CommentTicker.tsx                     # scrolling comment strip + thread
     Avatar.tsx · AvatarCustomizer.tsx     # SVG paper-doll + slot picker
     Garage.tsx · showroom/                # bikes + three.js canvas
     RiderMap.tsx · RidersView.tsx         # Leaflet (dynamic import, no SSR)
@@ -77,9 +92,10 @@ src/
   lib/
     prisma.ts · session.ts · uploads.ts   # server-only
     auth.ts · gear.ts · motorcycles.ts · locations.ts · format.ts
-    posts.ts · types.ts
+    posts.ts · types.ts · waves.ts     # waves.ts: the anonymous-wave toggle
 prisma/
-  schema.prisma                  # Post, User, GearItem, UserGear, Motorcycle, Location
+  schema.prisma                  # Post, Wave, Comment, User, GearItem, UserGear,
+                                 #   Motorcycle, Location
   seed.ts                        # gear catalog + sample posts
 ```
 
@@ -92,6 +108,8 @@ React, or Prisma — so a future mobile client can share them as-is.
 | Model        | What it holds                                                          |
 | ------------ | ---------------------------------------------------------------------- |
 | `Post`       | Author, content, optional `imageUrl`, optional link to a `User`        |
+| `Wave`       | A wave on a post — from a `User`, or a cookie `guestId` when anonymous |
+| `Comment`    | A reply on a post — always tied to a real `User`                       |
 | `User`       | Email, handle, password hash, bio, avatar skin tone                    |
 | `GearItem`   | Cosmetic catalog entry — slot, name, brand, rarity, SVG asset key      |
 | `UserGear`   | Who owns which gear item, and whether it's equipped                    |
@@ -136,5 +154,5 @@ the app as-is.
 
 ## Next ideas
 
-Comments, likes, tags/hashtags, feed pagination, real `.glb` models in the showroom, and
-the brand code redemption flow for gear.
+Deleting your own comments, tags/hashtags, feed pagination, a list of who waved at a post,
+real `.glb` models in the showroom, and the brand code redemption flow for gear.
