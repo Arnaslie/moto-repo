@@ -6,11 +6,12 @@
     "postinstall": "prisma generate",
     "dev": "next dev",
     "build": "next build",
-    "vercel-build": "prisma migrate deploy && next build",
+    "vercel-build": "prisma migrate deploy && tsx prisma/seed-catalog.ts && next build",
     "start": "next start",
     "lint": "eslint",
     "db:migrate": "prisma migrate dev",
     "db:seed": "prisma db seed",
+    "db:seed:catalog": "tsx prisma/seed-catalog.ts",
     "db:studio": "prisma studio"
   },
   "prisma": {

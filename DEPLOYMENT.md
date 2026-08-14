@@ -128,8 +128,20 @@ Blob enforces both.
   build fails on Vercel with *"@prisma/client did not initialize yet"*, because
   the dependency cache restores `node_modules` without re-running the
   generator.
-- Still to do: run `prisma migrate deploy` on deploy (build step or release
-  command) so the schema actually reaches the database.
+- `"vercel-build"` runs `prisma migrate deploy && tsx prisma/seed-catalog.ts &&
+  next build`. Vercel prefers that script over `build` when it exists, so the
+  migration and catalog seed are version-controlled rather than typed into a
+  dashboard field.
+
+> **Why a seed step in the build.** The gear catalog is reference data, not
+> demo content: signup writes a `UserGear` row per `STARTER_CATALOG` entry, so
+> a database with an empty `GearItem` table rejects **every signup** with a
+> foreign key violation on `UserGear_gearItemId_fkey`. Migrations create tables
+> but don't populate them, so a fresh database needs this. The upsert is keyed
+> on stable slug ids and therefore idempotent — safe on every deploy, and it
+> doubles as the way to push catalog edits live. `npm run db:seed` still exists
+> for local use and additionally inserts the demo posts, which production
+> deliberately doesn't get.
 
 ### 4. Vercel env vars
 - `DATABASE_URL` — pooled Postgres connection string
