@@ -7,7 +7,13 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  // Queries go through Neon's pooler: serverless opens a connection per
+  // invocation and would otherwise exhaust the server's limit.
+  url       = env("DATABASE_URL")
+  // Migrations don't. They issue DDL and advisory locks that a transaction-mode
+  // pooler can't carry, so they need the direct endpoint — same database, no
+  // pgbouncer in front. Both are injected by the Neon integration.
+  directUrl = env("DATABASE_URL_UNPOOLED")
 }
 
 model Post {
