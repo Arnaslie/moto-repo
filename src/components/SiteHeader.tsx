@@ -1,19 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
+import { Drivetrain } from "./Drivetrain";
 
 export type HeaderUser = { handle: string; displayName: string | null } | null;
 
 export function SiteHeader({ user }: { user: HeaderUser }) {
-  const pathname = usePathname();
   const router = useRouter();
-
-  const tabs = [
-    { href: "/", label: "Feed" },
-    { href: "/riders", label: "Riders" },
-    ...(user ? [{ href: `/profile/${user.handle}`, label: "Profile" }] : []),
-  ];
 
   async function logout() {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -68,24 +62,9 @@ export function SiteHeader({ user }: { user: HeaderUser }) {
           )}
         </div>
       </div>
-      <nav className="mt-3 flex gap-1">
-        {tabs.map((tab) => {
-          const active = pathname === tab.href;
-          return (
-            <Link
-              key={tab.href}
-              href={tab.href}
-              className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
-                active
-                  ? "bg-orange-500 text-white"
-                  : "text-black/60 hover:bg-black/5 dark:text-white/60 dark:hover:bg-white/10"
-              }`}
-            >
-              {tab.label}
-            </Link>
-          );
-        })}
-      </nav>
+      <div className="mt-2">
+        <Drivetrain handle={user?.handle ?? null} />
+      </div>
     </header>
   );
 }

@@ -12,10 +12,53 @@
   --font-mono: var(--font-geist-mono);
 }
 
+/* ---------------------------------------------------------------------------
+   Drivetrain — the six-speed nav in the header.
+
+   Cast steel for the sprockets, a darker alloy for the chain, and the brand
+   orange for whichever gear is engaged. The one colour that isn't already in
+   the palette is the green neutral lamp, which is the colour it is on every
+   bike dash ever made.
+
+   The windows punched through each sprocket and the hollow of each chain
+   roller are painted in --background, so they read as holes through the part
+   rather than shapes drawn on it. That's why they're tokens and not literals:
+   the parts have to sit on whatever the page ground is.
+--------------------------------------------------------------------------- */
+:root {
+  --drive-steel: #d5dae0;
+  --drive-steel-edge: #9ba4ad;
+  --drive-chain: #7d868f;
+  --drive-chain-edge: #5d666f;
+  --drive-tile: #eef1f4;
+  --drive-dim: #8b939c;
+  --drive-hair: rgba(20, 23, 27, 0.13);
+  --drive-lamp: #15803d;
+  --drive-lamp-soft: rgba(21, 128, 61, 0.13);
+  --drive-accent: #f97316;
+  --drive-accent-edge: #b34f04;
+  --drive-accent-text: #ac4f07;
+  --drive-accent-soft: rgba(249, 115, 22, 0.12);
+}
+
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0a0a0a;
     --foreground: #ededed;
+
+    --drive-steel: #2f363d;
+    --drive-steel-edge: #59636d;
+    --drive-chain: #79838d;
+    --drive-chain-edge: #99a3ad;
+    --drive-tile: #1b1f24;
+    --drive-dim: #6b727a;
+    --drive-hair: rgba(255, 255, 255, 0.1);
+    --drive-lamp: #4ade80;
+    --drive-lamp-soft: rgba(74, 222, 128, 0.12);
+    --drive-accent: #f97316;
+    --drive-accent-edge: #c2560c;
+    --drive-accent-text: #fb923c;
+    --drive-accent-soft: rgba(249, 115, 22, 0.14);
   }
 }
 
