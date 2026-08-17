@@ -4,8 +4,9 @@ Social media platform curated for motorcycle hobbyists and enthusiasts.
 
 A [Next.js](https://nextjs.org) (App Router) app: a feed you post rides to, accounts
 with customizable rider avatars, a garage of your real bikes with a 3D showroom, and a
-live map of riders sharing their position. Backed by SQLite via
-[Prisma](https://www.prisma.io/), styled with Tailwind CSS.
+live map of riders sharing their position. Backed by Postgres via
+[Prisma](https://www.prisma.io/), with images in Vercel Blob (or on local disk in dev),
+styled with Tailwind CSS.
 
 ## Features
 
@@ -19,6 +20,10 @@ live map of riders sharing their position. Backed by SQLite via
 - **Comment ticker** — comments run along the bottom of each post as an ESPN-style
   broadcast bottom line, crawling right-to-left. Click the strip to freeze it and expand
   the full thread with a reply box. Commenting requires an account.
+- **Six-speed nav** — the page nav is a gearbox. At rest it's a 40px gear-position
+  readout; hover, focus or tap drops the drivetrain down over the feed — cast sprockets
+  with a chain running between them — and scrolling packs it back up. See
+  [The drivetrain](#the-drivetrain) below.
 - **Accounts** — email + handle signup, password hashing with `bcryptjs`, sessions in an
   encrypted cookie via `iron-session`.
 - **Rider avatars** — layered SVG paper-doll drawn in code (no binary assets), customizable
@@ -28,32 +33,38 @@ live map of riders sharing their position. Backed by SQLite via
   Route-split so the ~900 KB 3D bundle only loads on `/showroom`.
 - **Rider map** — Leaflet map of riders currently sharing their location, with a toggle to
   go invisible.
-- **Image uploads** — stored outside `public/` and served through a route handler, so
-  runtime uploads work in production (see [Uploads](#uploads) below).
+- **Image uploads** — straight from the browser to Vercel Blob in production, to a private
+  local directory in dev (see [Uploads](#uploads) below).
 
 ## Getting started
 
+The app targets Postgres everywhere — there's no SQLite fallback, so local dev needs a
+connection string too: a free Neon/Supabase branch, a local `docker run postgres`, or
+`vercel env pull` to borrow the deployed one.
+
 ```bash
-npm install
-cp .env.example .env   # required — the app won't boot without SESSION_SECRET
-npm run db:migrate     # apply migrations and generate the Prisma client
+npm install            # postinstall also generates the Prisma client
+cp .env.example .env   # then fill in the two DB URLs and SESSION_SECRET
+npm run db:migrate     # apply migrations
 npm run db:seed        # gear catalog (idempotent) + sample posts
 npm run dev            # http://localhost:3000
 ```
 
-`.env` needs two values, both documented in `.env.example`, plus one optional toggle:
-
 | Variable                             | Notes                                                        |
 | ------------------------------------ | ------------------------------------------------------------ |
-| `DATABASE_URL`                       | SQLite file path, relative to `prisma/`                      |
+| `DATABASE_URL`                       | Postgres connection string. On Vercel use the **pooled** one — serverless opens a connection per invocation and the direct endpoint will exhaust the server's limit |
+| `DATABASE_URL_UNPOOLED`              | The **direct** endpoint, dialed by migrations only. Still required locally — every `prisma migrate` command fails with `P1012` if it's unset. Against a plain local Postgres, set it to the same value as `DATABASE_URL` |
 | `SESSION_SECRET`                     | Cookie encryption key, **must be ≥ 32 characters** or startup throws |
+| `BLOB_READ_WRITE_TOKEN`              | Optional. Set (Vercel adds it once a Blob store is connected) and uploads go to Blob; unset and they go to disk. Read at runtime, so switching needs no rebuild |
 | `NEXT_PUBLIC_ALLOW_ANONYMOUS_WAVES`  | Optional. `"true"` lets signed-out visitors wave; unset requires an account. Inlined at build time |
 
 ## Stack
 
 - **Next.js 16** — React 19, App Router, server components, Turbopack
-- **Prisma 6 + SQLite** — a local `prisma/dev.db` file, no external services
+- **Prisma 6 + Postgres** — queries through the pooler, migrations through the direct
+  endpoint (`directUrl` in the schema)
   (pinned to 6 — Prisma 7 dropped `url = env()` in the schema datasource)
+- **Vercel Blob** — image storage in production, with a local-disk fallback
 - **Tailwind CSS 4** — utility-first styling
 - **iron-session + bcryptjs** — stateless encrypted-cookie auth; both are pure JS, so
   they work on serverless runtimes
@@ -70,12 +81,13 @@ src/
     profile/[handle]/            # profile: avatar, customizer, garage, posts
     riders/                      # live rider map
     showroom/[id]/               # 3D bike showroom
-    media/[file]/route.ts        # serves user uploads at request time
+    media/[file]/route.ts        # serves disk-backed uploads at request time
     api/
       posts/                     # GET (list) + POST (create)
       posts/[id]/comments/       # GET the thread, POST a comment
       posts/[id]/waves/          # POST to wave, DELETE to take it back
-      uploads/                   # POST an image, returns its /media URL
+      uploads/                   # POST an image — the disk backend
+      uploads/token/             # mints a Blob client-upload token
       auth/{signup,login,logout}/
       avatar/                    # POST: save skin + equipped gear
       motorcycles/ · [id]/       # POST add a bike, DELETE remove one
@@ -85,23 +97,28 @@ src/
     PostFooter.tsx                        # action row + ticker (shared state)
     WaveButton.tsx · icons.tsx            # the wave hand, optimistic toggle
     CommentTicker.tsx                     # scrolling comment strip + thread
+    Drivetrain.tsx                        # the six-speed nav
     Avatar.tsx · AvatarCustomizer.tsx     # SVG paper-doll + slot picker
     Garage.tsx · showroom/                # bikes + three.js canvas
     RiderMap.tsx · RidersView.tsx         # Leaflet (dynamic import, no SSR)
     AuthForm.tsx · SiteHeader.tsx
   lib/
     prisma.ts · session.ts · uploads.ts   # server-only
-    auth.ts · gear.ts · motorcycles.ts · locations.ts · format.ts
-    posts.ts · types.ts · waves.ts     # waves.ts: the anonymous-wave toggle
+    auth.ts · comments.ts · drivetrain.ts · format.ts · gear.ts
+    locations.ts · motorcycles.ts · posts.ts · types.ts · waves.ts
 prisma/
   schema.prisma                  # Post, Wave, Comment, User, GearItem, UserGear,
                                  #   Motorcycle, Location
-  seed.ts                        # gear catalog + sample posts
+  migrations/                    # one Postgres init migration
+  gear-catalog.ts                # the catalog rows, shared by both seeds
+  seed.ts                        # catalog + sample posts (local)
+  seed-catalog.ts                # catalog only, run on deploy
 ```
 
-Modules in `lib/` that hold validation rules and shared shapes (`auth.ts`, `gear.ts`,
-`motorcycles.ts`, `locations.ts`, `format.ts`) deliberately import nothing from Next,
-React, or Prisma — so a future mobile client can share them as-is.
+Everything in `lib/` except `prisma.ts`, `session.ts` and `uploads.ts` deliberately
+imports nothing from Next, React, or Prisma — so a future mobile client can share those
+modules as-is. `drivetrain.ts` gets a second benefit from it: the nav's geometry is
+computed on the server too, so its resting state ships in the HTML.
 
 ## Data model
 
@@ -119,12 +136,42 @@ React, or Prisma — so a future mobile client can share them as-is.
 `Post.author` is denormalized and `Post.userId` is nullable so seeded and anonymous posts
 still render.
 
+The eight SQLite migrations were replaced by a single Postgres init migration when storage
+moved — nothing was lost, as they held only DDL. The move is one-way: Prisma binds a
+schema to one provider.
+
 ## Uploads
 
-Images are written to a private `./uploads` directory and served by the
-`/media/[file]` route handler — **not** from `public/`. Next only static-serves files in
-`public/` that existed at build time, so runtime uploads there 404 under `next start`.
-`src/lib/uploads.ts` is the single swap point for moving to S3 or Vercel Blob later.
+Two backends, picked at runtime by whether `BLOB_READ_WRITE_TOKEN` is set:
+
+- **Vercel Blob** — the browser uploads straight to Blob, having first fetched a token
+  from `/api/uploads/token`, which authenticates the rider and pins the allowed types and
+  size for Blob to enforce. Direct upload isn't a flourish: Vercel caps function request
+  bodies at 4.5 MB and we allow 5 MB images, so routing bytes through `/api/uploads` would
+  413 on large photos.
+- **Local disk** — bytes go to a private `./uploads` directory and come back through the
+  `/media/[file]` route handler, **not** `public/` (Next only static-serves what existed
+  at build time). Keeps `npm run dev` zero-config.
+
+`isValidUploadUrl()` in `src/lib/uploads.ts` is the gate both funnel into: it accepts a
+`/media` path or an https URL on our own Blob store's host — derived from the token — so
+an arbitrary remote URL can't be persisted on a post.
+
+## The drivetrain
+
+The nav's geometry is derived, not drawn. Pitch is the only number picked by eye; the
+pitch radius falls out of it and the tooth count, which is what seats the rollers in the
+valleys. Shifting runs the chain the real distance between two sprockets, and each
+sprocket turns at the rate the chain feeds it — so with nothing engaged, the return run
+goes slack.
+
+Three of the six gears have no page yet and render as dashed blanks that grind instead of
+navigating, which keeps the roadmap on screen. **Their labels are placeholders, not
+decided.** Renaming one is a single array in `src/lib/drivetrain.ts`; shipping a page is
+that plus an `href`. Signed out, the sixth gear stays whole but dimmed and sends you to
+log in, the way the wave button does.
+
+It's called Drivetrain because "gear" in this repo already means the riding kind.
 
 ## Gear, and what this product is not
 
@@ -135,24 +182,30 @@ never a store; nothing here is or will be for sale.
 
 ## Handy scripts
 
-| Command              | Description                                     |
-| -------------------- | ----------------------------------------------- |
-| `npm run dev`        | Start the dev server                            |
-| `npm run build`      | Production build                                |
-| `npm run start`      | Serve the production build                      |
-| `npm run lint`       | ESLint                                          |
-| `npm run db:migrate` | Create/apply a migration (`prisma migrate dev`) |
-| `npm run db:seed`    | Seed the gear catalog and sample posts          |
-| `npm run db:studio`  | Open Prisma Studio to browse the DB             |
+| Command                   | Description                                             |
+| ------------------------- | ------------------------------------------------------- |
+| `npm run dev`             | Start the dev server                                    |
+| `npm run build`           | Production build                                        |
+| `npm run start`           | Serve the production build                              |
+| `npm run lint`            | ESLint                                                  |
+| `npm run db:migrate`      | Create/apply a migration (`prisma migrate dev`)          |
+| `npm run db:seed`         | Seed the gear catalog and sample posts                  |
+| `npm run db:seed:catalog` | Seed the gear catalog only — no demo posts              |
+| `npm run db:studio`       | Open Prisma Studio to browse the DB                     |
+
+`postinstall` regenerates the Prisma client, which Vercel's dependency cache would
+otherwise skip. `vercel-build` runs `migrate deploy` and the catalog-only seed before the
+build, so a fresh database has the schema and can accept signups.
 
 ## Deploying
 
-See [DEPLOYMENT.md](./DEPLOYMENT.md). Short version: Vercel works, but SQLite and the
-local `./uploads` directory don't survive an ephemeral serverless filesystem — you'd swap
-in Postgres and an object store first. A persistent host (Railway, Fly.io, a VPS) can run
-the app as-is.
+See [DEPLOYMENT.md](./DEPLOYMENT.md). Short version: Vercel, with Postgres (Neon) for the
+database and Blob for images — both swaps are done, so a deploy is now env vars plus a
+push. A persistent host (Railway, Fly.io, a VPS) still works too, and can keep uploads on
+disk.
 
 ## Next ideas
 
-Deleting your own comments, tags/hashtags, feed pagination, a list of who waved at a post,
-real `.glb` models in the showroom, and the brand code redemption flow for gear.
+Pages for the three empty gears, deleting your own comments, tags/hashtags, feed
+pagination, a list of who waved at a post, real `.glb` models in the showroom, and the
+brand code redemption flow for gear.

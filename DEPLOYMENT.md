@@ -61,10 +61,23 @@ the demo riders.
 | Var | Where | When it's read |
 | --- | --- | --- |
 | `DATABASE_URL` | `prisma/schema.prisma` | runtime |
+| `DATABASE_URL_UNPOOLED` | `prisma/schema.prisma` (`directUrl`) | `prisma migrate` / `validate` |
 | `SESSION_SECRET` | `src/lib/session.ts` | runtime |
 | `BLOB_READ_WRITE_TOKEN` | `src/lib/uploads.ts` | runtime (unset = disk) |
+| `BLOB_STORE_ID` | `src/lib/uploads.ts` | runtime (optional override) |
 | `NEXT_PUBLIC_ALLOW_ANONYMOUS_WAVES` | `src/lib/waves.ts` | **build** |
 | `NODE_ENV` | `src/lib/prisma.ts`, `src/lib/session.ts` | set automatically |
+
+`DATABASE_URL_UNPOOLED` is not optional. Prisma resolves every `env()` in the
+datasource before it does anything else, so a missing value fails every
+`prisma migrate` command — and `prisma validate` — outright with `P1012`,
+before the CLI so much as opens a connection. (`prisma generate` is the one
+that shrugs it off, which is why a broken setup can stay hidden until the first
+migration.) Neon's
+integration injects it alongside `DATABASE_URL`; against a plain Postgres with
+no pooler in front, set it to the same string. `BLOB_STORE_ID` only exists to
+override the store id that `src/lib/uploads.ts` otherwise parses out of the
+read-write token — leave it unset unless the two ever diverge.
 
 The waves flag is the one to watch: `NEXT_PUBLIC_` means Next inlines it into
 the client bundle during `next build`, so it has to be set in the host's
@@ -145,6 +158,9 @@ Blob enforces both.
 
 ### 4. Vercel env vars
 - `DATABASE_URL` — pooled Postgres connection string
+- `DATABASE_URL_UNPOOLED` — the direct endpoint, for `migrate deploy` in
+  `vercel-build`. The Neon integration adds both; without it the build fails at
+  schema load, before it ever reaches the database.
 - `SESSION_SECRET` — 32+ char random string
   (`node -e "console.log(require('crypto').randomBytes(24).toString('hex'))"`)
 - `NEXT_PUBLIC_ALLOW_ANONYMOUS_WAVES` — only if guests should be able to wave.
