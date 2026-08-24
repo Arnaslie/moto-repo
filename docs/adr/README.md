@@ -13,3 +13,4 @@ editing history — the wrong turns are half of what makes the file worth keepin
 | # | Decision | Status |
 | --- | --- | --- |
 | [0001](./0001-app-wide-notifications.md) | App-wide notifications, on top of direct messages | Accepted, not yet implemented |
+| [0002](./0002-video-and-360-uploads.md) | Video and 360 footage on posts | Accepted, not yet implemented |
