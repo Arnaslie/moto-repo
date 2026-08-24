@@ -13,10 +13,11 @@ export default async function RoomPage({ params }: { params: Promise<{ id: strin
   const { id } = await params;
 
   // The door needs an account — signed out you can read the directory, but not
-  // hear anything. Bounce to login rather than 404ing, so the link still works
-  // after signing in.
+  // hear anything. Bounce to login rather than 404ing, and carry the room along
+  // so signing in puts them *in* it. A room link shared into a group chat is
+  // how rooms fill; landing on the feed instead loses the room and the moment.
   const user = await getCurrentUser();
-  if (!user) redirect("/login");
+  if (!user) redirect(`/login?next=${encodeURIComponent(`/comms/${id}`)}`);
 
   const room = await prisma.room.findUnique({
     where: { id },

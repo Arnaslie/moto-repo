@@ -176,7 +176,10 @@ export function RoomDirectory({
           )
         ) : (
           <p className="mt-3 text-sm text-black/50 dark:text-white/50">
-            <Link href="/login" className="font-semibold text-orange-500 hover:underline">
+            <Link
+              href="/login?next=%2Fcomms"
+              className="font-semibold text-orange-500 hover:underline"
+            >
               Log in
             </Link>{" "}
             to listen in or start one of your own.
@@ -231,8 +234,12 @@ function EmptyDirectory({ signedIn, onStart }: { signedIn: boolean; onStart: () 
 
 function RoomCard({ room, signedIn }: { room: RoomSummary; signedIn: boolean }) {
   // Signed out you can read the card but not open the door. The titles are the
-  // best advertisement the app has; the audio needs an account.
-  const href = signedIn ? `/comms/${room.id}` : "/login";
+  // best advertisement the app has; the audio needs an account. Logging in
+  // carries the room along, so the door opens onto the room they picked rather
+  // than the feed.
+  const href = signedIn
+    ? `/comms/${room.id}`
+    : `/login?next=${encodeURIComponent(`/comms/${room.id}`)}`;
 
   return (
     <Link

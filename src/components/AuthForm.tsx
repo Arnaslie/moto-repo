@@ -4,9 +4,19 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
-export function AuthForm({ mode }: { mode: "signup" | "login" }) {
+export function AuthForm({
+  mode,
+  next = null,
+}: {
+  mode: "signup" | "login";
+  /** Where they were headed before the door. Already validated by the page
+   *  that rendered this — see safeNextPath in lib/auth. */
+  next?: string | null;
+}) {
   const router = useRouter();
   const isSignup = mode === "signup";
+  const switchHref = (to: "/login" | "/signup") =>
+    next ? `${to}?next=${encodeURIComponent(next)}` : to;
 
   const [displayName, setDisplayName] = useState("");
   const [handle, setHandle] = useState("");
@@ -33,7 +43,9 @@ export function AuthForm({ mode }: { mode: "signup" | "login" }) {
       if (!res.ok) throw new Error(data.error ?? "Something went wrong.");
 
       router.refresh();
-      router.push(isSignup ? `/profile/${data.user.handle}` : "/");
+      // Somewhere to get back to beats the default landing — a rider who
+      // signed up to get into a room wants the room, not their empty profile.
+      router.push(next ?? (isSignup ? `/profile/${data.user.handle}` : "/"));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
       setSubmitting(false);
@@ -107,14 +119,14 @@ export function AuthForm({ mode }: { mode: "signup" | "login" }) {
         {isSignup ? (
           <>
             Already have an account?{" "}
-            <Link href="/login" className="font-medium text-orange-500">
+            <Link href={switchHref("/login")} className="font-medium text-orange-500">
               Log in
             </Link>
           </>
         ) : (
           <>
             New here?{" "}
-            <Link href="/signup" className="font-medium text-orange-500">
+            <Link href={switchHref("/signup")} className="font-medium text-orange-500">
               Sign up
             </Link>
           </>
