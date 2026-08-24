@@ -143,6 +143,13 @@ model Room {
   // because every listing filters on it.
   @@index([closedAt, openedAt])
   @@index([hostId])
+
+  // NOTE: the migration also creates a *partial* unique index —
+  //   CREATE UNIQUE INDEX "Room_one_open_per_host" ON "Room"("hostId")
+  //     WHERE "closedAt" IS NULL;
+  // — which is what actually enforces one open room per host. Prisma's schema
+  // language can't express a partial index, so it isn't declared above and
+  // `migrate dev` will report it as drift. It is deliberate: keep it.
 }
 
 // A bike in a rider's garage, shown on their profile.
