@@ -213,8 +213,11 @@ export type Gear = {
 
 /**
  * First is where you pull away, so it's the feed. Sixth is the cruising gear,
- * so it's you. Gears 3-5 are named but not built: they render as empty
+ * so it's you. Gears 3 and 4 are named but not built: they render as empty
  * sprockets, which puts the roadmap in the nav where we'll trip over it.
+ *
+ * Fifth is Comms — the intercom. It sits high in the box on purpose: it's what
+ * you're in when you've stopped moving and settled into a conversation.
  */
 export function gearsFor(handle: string | null): Gear[] {
   return [
@@ -222,12 +225,22 @@ export function gearsFor(handle: string | null): Gear[] {
     { n: 2, label: "Riders", href: "/riders" },
     { n: 3, label: "Garage", href: null },
     { n: 4, label: "Routes", href: null },
-    { n: 5, label: "Market", href: null },
+    { n: 5, label: "Comms", href: "/comms" },
     { n: 6, label: "Profile", href: handle ? `/profile/${handle}` : null, auth: true },
   ];
 }
 
-/** The engaged gear for a path, or 0 for neutral — anywhere outside the six. */
+/**
+ * The engaged gear for a path, or 0 for neutral — anywhere outside the six.
+ *
+ * A page nested under a gear counts as that gear: you're in a Comms room, so
+ * you're in fifth, not coasting in neutral. Only ever a *child* path, which is
+ * why the gears with parameterised hrefs are unaffected — `/profile/someone`
+ * isn't under `/profile/you`, and `/` can't prefix-match anything but itself.
+ */
 export function gearForPath(gears: Gear[], pathname: string): number {
-  return gears.find((g) => g.href && g.href === pathname)?.n ?? 0;
+  const engaged = gears.find(
+    (g) => g.href && (g.href === pathname || pathname.startsWith(`${g.href}/`)),
+  );
+  return engaged?.n ?? 0;
 }
