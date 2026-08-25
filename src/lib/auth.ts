@@ -17,6 +17,30 @@ export type LoginInput = {
 
 type Result<T> = { ok: true; value: T } | { ok: false; error: string };
 
+/**
+ * Where to send someone once they've signed in, when they were interrupted on
+ * the way somewhere else.
+ *
+ * Only ever a path on this site. `//evil.com` and `/\evil.com` both start with
+ * a slash but a browser normalises them into protocol-relative URLs, which
+ * would turn our login page into a redirect service for somebody else's — so
+ * they're refused rather than escaped. Control characters go too: a newline in
+ * a redirect target is header-splitting material.
+ *
+ * Bouncing back to /login or /signup is a loop, so those don't count as
+ * somewhere to return to.
+ */
+export function safeNextPath(value: unknown): string | null {
+  if (typeof value !== "string" || !value.startsWith("/")) return null;
+  if (value.startsWith("//") || value.startsWith("/\\")) return null;
+  if (/[\u0000-\u001f\u007f]/.test(value)) return null;
+
+  const path = value.split(/[?#]/)[0];
+  if (path === "/login" || path === "/signup") return null;
+
+  return value;
+}
+
 function isEmail(value: string): boolean {
   // Deliberately loose — real validation is "can we send to it", which is out
   // of scope. This just catches obvious typos.

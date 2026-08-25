@@ -113,6 +113,43 @@ model User {
   waves       Wave[]
   gear        UserGear[]
   motorcycles Motorcycle[]
+  rooms       Room[]
+}
+
+// A voice room in Comms — the intercom. Opened by a rider, who is its host:
+// opening a room *is* taking the first of the four mic seats, so a room never
+// exists with nobody talking in it.
+//
+// This is a session, not a channel. It lives while people are in it and
+// `closedAt` retires it, which is what makes the directory "what's happening
+// now" rather than a list of dead rooms. Topics are tags picked when the room
+// is opened, not permanent places — the title is what actually fills a room,
+// and the host can rewrite it while live as the conversation drifts.
+//
+// Who's on the floor is deliberately *not* here: mic rights are LiveKit
+// participant permissions, which is the only copy that can't drift from what
+// the server will actually accept audio from.
+model Room {
+  id       String    @id @default(cuid())
+  title    String
+  topic    String // maintenance | rally | gear | general
+  hostId   String
+  openedAt DateTime  @default(now())
+  closedAt DateTime?
+
+  host User @relation(fields: [hostId], references: [id], onDelete: Cascade)
+
+  // The directory's one query: live rooms, newest first. `closedAt` leads
+  // because every listing filters on it.
+  @@index([closedAt, openedAt])
+  @@index([hostId])
+
+  // NOTE: the migration also creates a *partial* unique index —
+  //   CREATE UNIQUE INDEX "Room_one_open_per_host" ON "Room"("hostId")
+  //     WHERE "closedAt" IS NULL;
+  // — which is what actually enforces one open room per host. Prisma's schema
+  // language can't express a partial index, so it isn't declared above and
+  // `migrate dev` will report it as drift. It is deliberate: keep it.
 }
 
 // A bike in a rider's garage, shown on their profile.
