@@ -1,6 +1,9 @@
 # ADR 0001 — App-wide notifications, on top of direct messages
 
-- **Status:** Accepted, not yet implemented
+- **Status:** Accepted. The DM half is implemented — see
+  [0003](./0003-direct-messages-polled.md), which ships it polled rather than
+  streamed and without `Block`. The notification layer (steps 4–6) is not built,
+  and this record remains the design for it.
 - **Date:** 2026-08-24
 - **Supersedes / superseded by:** —
 - **Touches:** `prisma/schema.prisma`, `src/lib/`, `src/app/api/`, `src/components/SiteHeader.tsx`

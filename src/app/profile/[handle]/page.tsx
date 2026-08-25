@@ -6,6 +6,7 @@ import { Avatar, type EquippedItem } from "@/components/Avatar";
 import { AvatarCustomizer, type OwnedItem } from "@/components/AvatarCustomizer";
 import { PostCard } from "@/components/PostCard";
 import { Garage } from "@/components/Garage";
+import { MessageButton } from "@/components/messages/MessageButton";
 import { postInclude, serializePost } from "@/lib/posts";
 import type { SlotKey, Rarity } from "@/lib/gear";
 
@@ -75,6 +76,10 @@ export default async function ProfilePage({
           </div>
         </div>
         {user.bio && <p className="mt-3 whitespace-pre-wrap text-[15px]">{user.bio}</p>}
+
+        {/* Only on someone else's profile, and only when signed in — there's
+            nobody to message otherwise. */}
+        {viewer && !isOwner && <MessageButton handle={user.handle} />}
       </section>
 
       {isOwner && (
