@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import * as D from "@/lib/drivetrain";
 
 /* ---------------------------------------------------------------------------
@@ -27,6 +27,17 @@ import * as D from "@/lib/drivetrain";
      so the resting state is in the server HTML and hydration has nothing to
      disagree about.
 --------------------------------------------------------------------------- */
+
+/**
+ * The draw pass has to run before the browser paints, not after.
+ *
+ * React owns the attributes it writes over, so on the frame a new page mounts
+ * the panel is rendered at its resting height and `--grow` isn't set yet. As a
+ * passive effect the correction lands one painted frame late, which is a visible
+ * flick of the panel collapsing and reopening mid-shift. useLayoutEffect closes
+ * that gap; the alias is so it doesn't warn while this renders on the server.
+ */
+const useDrawEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
 
 const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
@@ -85,23 +96,30 @@ function custom(r: Rig, key: string, fn: (t: number) => void, ms: number) {
   startLoop(r);
 }
 
+/* ---------------------------------------------------------------------------
+   The shift runs before the navigation, not across it.
+
+   layout.tsx carries no chrome, so every page mounts its own SiteHeader and
+   therefore its own Drivetrain. A gear click used to navigate immediately,
+   which unmounted the component the animation was running in — so the chain
+   never got to turn. Carrying the rig across that remount was one way out and
+   it worked, but only by making the animation depend on state surviving a
+   teardown, and on nothing else closing the panel in between. Something always
+   was: the arriving page's scroll-to-top, for one.
+
+   The placeholder gears never had the problem, because grinding at you doesn't
+   navigate. So a real gear now does what they do — run the animation in a
+   component that is staying put — and only then goes. Nothing has to survive
+   anything, and the panel on the far side is a fresh one at rest.
+--------------------------------------------------------------------------- */
+
 export function Drivetrain({ handle }: { handle: string | null }) {
   const pathname = usePathname();
   const gears = D.gearsFor(handle);
   const engaged = D.gearForPath(gears, pathname);
 
+  const router = useRouter();
   const [open, setOpen] = useState(false);
-
-  const dockRef = useRef<HTMLDivElement>(null);
-  const panelRef = useRef<HTMLDivElement>(null);
-  const lampRef = useRef<SVGGElement>(null);
-  const chainRef = useRef<SVGGElement>(null);
-  const linkRefs = useRef<(SVGGElement | null)[]>([]);
-  const gearRefs = useRef<(SVGGElement | null)[]>([]);
-  const spinRefs = useRef<(SVGGElement | null)[]>([]);
-  const numRefs = useRef<(SVGTextElement | null)[]>([]);
-  const labelRefs = useRef<(SVGTextElement | null)[]>([]);
-  const tileRefs = useRef<(SVGGElement | null)[]>([]);
 
   // Everything that animates. Refs, not state: none of it drives a re-render.
   const rig = useRef<Rig>({
@@ -116,7 +134,21 @@ export function Drivetrain({ handle }: { handle: string | null }) {
     draw: undefined,
   });
 
+  // The gear the chain is sitting on. Only ever differs from `engaged` between
+  // a click and the navigation it defers.
   const prevGear = useRef(engaged);
+
+  const dockRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const lampRef = useRef<SVGGElement>(null);
+  const chainRef = useRef<SVGGElement>(null);
+  const linkRefs = useRef<(SVGGElement | null)[]>([]);
+  const gearRefs = useRef<(SVGGElement | null)[]>([]);
+  const spinRefs = useRef<(SVGGElement | null)[]>([]);
+  const numRefs = useRef<(SVGTextElement | null)[]>([]);
+  const labelRefs = useRef<(SVGTextElement | null)[]>([]);
+  const tileRefs = useRef<(SVGGElement | null)[]>([]);
+
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastScroll = useRef(0);
   // Per-gear dimming, read by the draw pass — which owns opacity frame to
@@ -124,7 +156,7 @@ export function Drivetrain({ handle }: { handle: string | null }) {
   const dim = useRef<number[]>(gears.map(() => 1));
 
   /* ---------------- the draw pass ---------------- */
-  useEffect(() => {
+  useDrawEffect(() => {
     const r = rig.current;
 
     const draw = () => {
@@ -204,14 +236,22 @@ export function Drivetrain({ handle }: { handle: string | null }) {
     };
     measure();
 
+    // Unmounting cancelled the frame but left the tweens on the shared rig, so
+    // a shift interrupted by a navigation is picked up here and finished.
+    if (r.tweens.length) startLoop(r);
+
     const ro = new ResizeObserver(measure);
     if (dockRef.current) ro.observe(dockRef.current);
     return () => {
       ro.disconnect();
       if (r.raf) cancelAnimationFrame(r.raf);
       r.raf = 0;
+      // This one's closure calls setOpen on a component that's going away, and
+      // tweens a rig that isn't. Left running it would shut the panel the next
+      // mount is meant to inherit.
+      if (hoverTimer.current) clearTimeout(hoverTimer.current);
     };
-     
+
   }, []);
 
   // Re-apply the animated values after every commit. React owns the attributes
@@ -219,7 +259,7 @@ export function Drivetrain({ handle }: { handle: string | null }) {
   // so a re-render for any reason — a shift, a session change — snaps them back
   // to their resting values. Mid-tween the next frame hides that; at rest,
   // nothing would.
-  useEffect(() => {
+  useDrawEffect(() => {
     rig.current.draw?.();
   });
 
@@ -228,27 +268,6 @@ export function Drivetrain({ handle }: { handle: string | null }) {
     dim.current = D.gearsFor(handle).map((g) => (g.href === null && g.auth ? 0.5 : 1));
     rig.current.draw?.();
   }, [handle]);
-
-  /* ---------------- shifting ----------------
-     Driven by the path, not the click, so the chain also runs when you use the
-     back button or land on a page cold. */
-  useEffect(() => {
-    const r = rig.current;
-    const from = prevGear.current;
-    prevGear.current = engaged;
-
-    if (engaged === 0) {
-      // Nothing engaged, so nothing driving: the return run goes slack.
-      tween(r, "sag", D.SAG_LOOSE, 420);
-      tween(r, "phase", r.phase + 6, 420);
-      return;
-    }
-    const start = from === 0 ? engaged : from;
-    const steps = Math.abs(engaged - start);
-    // The chain runs the real distance between the two sprockets.
-    tween(r, "phase", r.phase + (engaged - start) * D.SPAN, 260 + 110 * steps);
-    tween(r, "sag", D.SAG_DRIVE, 300);
-  }, [engaged]);
 
   /* ---------------- open and close ---------------- */
   const setOpenTo = (want: boolean, delay = 0) => {
@@ -260,6 +279,45 @@ export function Drivetrain({ handle }: { handle: string | null }) {
     if (delay) hoverTimer.current = setTimeout(go, delay);
     else go();
   };
+
+  /* ---------------- shifting ----------------
+     One shift, two ways in.
+
+     `runShift` is the animation itself: the chain runs the real distance
+     between two sprockets, and it returns how long that takes so the caller can
+     decide what happens after. A gear click calls it and *then* navigates (see
+     the Link below) — that's what keeps the whole thing inside a component
+     that isn't about to be torn down.
+
+     The effect is the other way in, for a path that changed without going
+     through the click — a redirect, or moving between two pages that share a
+     component so React keeps the instance. It is deliberately *not* a fallback
+     for the back button: that remounts, which starts prevGear equal to the gear
+     arrived at, so nothing runs. Animating an arrival you didn't ask for is the
+     thing this component kept trying to do and kept getting wrong; a shift you
+     watch is one you asked for. The guard is also what stops a click's own
+     shift being run a second time on the far side. */
+  const runShift = useCallback((to: number) => {
+    const from = prevGear.current;
+    prevGear.current = to;
+
+    if (to === 0) {
+      // Nothing engaged, so nothing driving: the return run goes slack.
+      tween(rig.current, "sag", D.SAG_LOOSE, 420);
+      tween(rig.current, "phase", rig.current.phase + 6, 420);
+      return 420;
+    }
+    const start = from === 0 ? to : from;
+    const steps = Math.abs(to - start);
+    const ms = 260 + 110 * steps;
+    tween(rig.current, "phase", rig.current.phase + (to - start) * D.SPAN, ms);
+    tween(rig.current, "sag", D.SAG_DRIVE, 300);
+    return ms;
+  }, []);
+
+  useEffect(() => {
+    if (prevGear.current !== engaged) runShift(engaged);
+  }, [engaged, runShift]);
 
   useEffect(() => {
     // Reading, not navigating. Also stops the panel flapping open under a
@@ -546,8 +604,27 @@ export function Drivetrain({ handle }: { handle: string | null }) {
                     setOpenTo(true);
                     return;
                   }
-                  // Let the shift land before the room goes.
-                  setOpenTo(false, 380);
+
+                  // A modified click is someone opening the page in a tab or
+                  // a window, which is half of why these are links at all.
+                  // Nothing is about to unmount, so there's nothing to defer.
+                  if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+
+                  // Nothing to watch: the panel is shut, or you picked the
+                  // gear you're already in. Let the Link do what a link does.
+                  if (rig.current.open <= 0 || rig.current.reduced || gear.n === engaged) {
+                    setOpenTo(false, 380);
+                    return;
+                  }
+
+                  // Otherwise hold the navigation open just long enough to run
+                  // the shift in front of you. `prefetch` means the page is
+                  // usually already sitting there when the chain stops, so what
+                  // this costs is the animation and nothing else.
+                  e.preventDefault();
+                  const ms = runShift(gear.n);
+                  setOpenTo(false, ms);
+                  window.setTimeout(() => router.push(gear.href!), ms + 90);
                 }}
               />
             );
