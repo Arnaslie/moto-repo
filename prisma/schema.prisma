@@ -6,7 +6,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider  = "postgresql"
   // Queries go through Neon's pooler: serverless opens a connection per
   // invocation and would otherwise exhaust the server's limit.
   url       = env("DATABASE_URL")
@@ -108,12 +108,14 @@ model User {
   avatarSkin   String   @default("#c68642")
   createdAt    DateTime @default(now())
 
-  posts       Post[]
-  comments    Comment[]
-  waves       Wave[]
-  gear        UserGear[]
-  motorcycles Motorcycle[]
-  rooms       Room[]
+  posts         Post[]
+  comments      Comment[]
+  waves         Wave[]
+  gear          UserGear[]
+  motorcycles   Motorcycle[]
+  rooms         Room[]
+  conversations Participant[]
+  messages      Message[]
 }
 
 // A voice room in Comms — the intercom. Opened by a rider, who is its host:
@@ -139,17 +141,17 @@ model Room {
 
   host User @relation(fields: [hostId], references: [id], onDelete: Cascade)
 
-  // The directory's one query: live rooms, newest first. `closedAt` leads
-  // because every listing filters on it.
-  @@index([closedAt, openedAt])
-  @@index([hostId])
-
   // NOTE: the migration also creates a *partial* unique index —
   //   CREATE UNIQUE INDEX "Room_one_open_per_host" ON "Room"("hostId")
   //     WHERE "closedAt" IS NULL;
   // — which is what actually enforces one open room per host. Prisma's schema
   // language can't express a partial index, so it isn't declared above and
   // `migrate dev` will report it as drift. It is deliberate: keep it.
+
+  // The directory's one query: live rooms, newest first. `closedAt` leads
+  // because every listing filters on it.
+  @@index([closedAt, openedAt])
+  @@index([hostId])
 }
 
 // A bike in a rider's garage, shown on their profile.
@@ -201,4 +203,74 @@ model UserGear {
 
   @@unique([userId, gearItemId])
   @@index([userId])
+}
+
+// A 1:1 direct message thread. Unlike a Room this is a *place*, not a session:
+// it has no open/closed state, it outlives every message in it, and it's found
+// by who's in it rather than by what it's about.
+//
+// `pairKey` is the two user ids sorted and joined with ":". It's unique, so
+// "start a DM with @x" is an upsert that can't race into two conversations for
+// the same pair — the same idempotency-via-unique-constraint move Wave makes
+// with @@unique([postId, userId]). Sorting is what makes it symmetric: A→B and
+// B→A produce the same key, so the two directions can't each mint a thread.
+model Conversation {
+  id      String @id @default(cuid())
+  pairKey String @unique
+
+  createdAt     DateTime @default(now())
+  // Denormalized so the inbox can sort without touching Message. Bumped in the
+  // same transaction as the insert that moved it.
+  lastMessageAt DateTime @default(now())
+
+  participants Participant[]
+  messages     Message[]
+
+  @@index([lastMessageAt])
+}
+
+// One side of a conversation. A join table rather than aId/bId columns on
+// Conversation, because read state is *per side* and needs somewhere to live —
+// and because it leaves group threads possible later without a migration that
+// rewrites what's already there.
+model Participant {
+  id             String    @id @default(cuid())
+  conversationId String
+  userId         String
+  lastReadAt     DateTime?
+  // Bumped on the *other* participant's row when a message lands, zeroed when
+  // they open the thread. Denormalized because the header polls it constantly
+  // and a live COUNT over Message would be the app's most-run query.
+  //
+  // A 40-message burst is one unread conversation here, not 40 notifications:
+  // the count that matters is how many threads are waiting on you.
+  unreadCount    Int       @default(0)
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // One row per side, and the guard that makes the start-a-thread upsert safe.
+  @@unique([conversationId, userId])
+  // The inbox query: every conversation I'm in.
+  @@index([userId])
+}
+
+// A message in a thread. No `author` denormalization, unlike Post and Comment:
+// a thread has exactly two people in it and always joins them anyway, so the
+// handle is free on read — and this way a handle change is reflected rather
+// than frozen into every line the rider ever sent (the newer preference, noted
+// in the Room comment above).
+model Message {
+  id             String   @id @default(cuid())
+  conversationId String
+  senderId       String
+  body           String
+  createdAt      DateTime @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  // Both of the thread's queries: render it oldest-first, and fetch "anything
+  // after this timestamp" on each poll tick.
+  @@index([conversationId, createdAt])
 }

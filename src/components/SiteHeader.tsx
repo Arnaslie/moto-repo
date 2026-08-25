@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Drivetrain } from "./Drivetrain";
+import { MessagesLink } from "./messages/MessagesLink";
 
 export type HeaderUser = { handle: string; displayName: string | null } | null;
 
@@ -30,6 +31,7 @@ export function SiteHeader({ user }: { user: HeaderUser }) {
         <div className="flex shrink-0 items-center gap-2 text-sm">
           {user ? (
             <>
+              <MessagesLink handle={user.handle} />
               <Link
                 href={`/profile/${user.handle}`}
                 className="font-medium text-black/70 hover:text-orange-500 dark:text-white/70"

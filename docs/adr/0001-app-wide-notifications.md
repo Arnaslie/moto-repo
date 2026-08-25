@@ -1,6 +1,9 @@
 # ADR 0001 — App-wide notifications, on top of direct messages
 
-- **Status:** Accepted, not yet implemented
+- **Status:** Accepted. The DM half is implemented — see
+  [0003](./0003-direct-messages-polled.md), which ships it polled rather than
+  streamed and without `Block`. The notification layer (steps 4–6) is not built,
+  and this record remains the design for it.
 - **Date:** 2026-08-24
 - **Supersedes / superseded by:** —
 - **Touches:** `prisma/schema.prisma`, `src/lib/`, `src/app/api/`, `src/components/SiteHeader.tsx`
@@ -317,6 +320,12 @@ on a separate dot. The count sits beside it in `tabular-nums`, with a
 for its tally.
 
 ### `WheelIcon` — geometry, derived from the reference
+
+> **Revised by [0004](./0004-wheel-icon-measured.md).** The icon is built. The
+> numbers below were read off the photo by eye; 0004 measured them, kept most,
+> and departs on two — the blade roots stay open rather than merging into the
+> star, and a blade sits at twelve rather than a window. The states and the
+> rim-stripe idea are unchanged.
 
 Reference: [`assets/0001-ninja-h2r.jpg`](./assets/0001-ninja-h2r.jpg), rear wheel
 detail at [`assets/0001-h2r-rear-wheel.jpg`](./assets/0001-h2r-rear-wheel.jpg) —
