@@ -38,7 +38,7 @@ styled with Tailwind CSS.
   the database, so two people opening one on each other at the same moment land in the
   same conversation rather than two. Unread is a per-side counter on the thread, not a
   flag per message: forty messages from one rider is one conversation waiting for you, and
-  that's what the header badge counts. Sending is optimistic; new messages arrive on a
+  that's what the wheel in the header counts. Sending is optimistic; new messages arrive on a
   3-second poll (see [docs/adr/0003](./docs/adr/0003-direct-messages-polled.md) for why
   that isn't a socket, and what would replace it).
 - **Image uploads** — straight from the browser to Vercel Blob in production, to a private
@@ -135,11 +135,12 @@ src/
         [id]/                    # GET the thread (?after= for the poll)
         [id]/messages/           # POST a message
         [id]/read/               # POST to clear your unread count
-      messages/unread/           # GET what the header badge polls
+      messages/unread/           # GET what the header wheel polls
   components/
     Feed.tsx · Composer.tsx · PostCard.tsx
     PostFooter.tsx                        # action row + ticker (shared state)
-    WaveButton.tsx · icons.tsx            # the wave hand, optimistic toggle
+    WaveButton.tsx · icons.tsx            # the wave hand, and the H2R wheel
+                                          #   measured off the photo in docs/adr
     CommentTicker.tsx                     # scrolling comment strip + thread
     Drivetrain.tsx                        # the six-speed nav
     Avatar.tsx · AvatarCustomizer.tsx     # SVG paper-doll + slot picker

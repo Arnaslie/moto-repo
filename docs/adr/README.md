@@ -15,3 +15,4 @@ editing history — the wrong turns are half of what makes the file worth keepin
 | [0001](./0001-app-wide-notifications.md) | App-wide notifications, on top of direct messages | Partly implemented by 0003 — DMs built, notifications not |
 | [0002](./0002-video-and-360-uploads.md) | Video and 360 footage on posts | Accepted, not yet implemented |
 | [0003](./0003-direct-messages-polled.md) | Direct messages, polled | Implemented |
+| [0004](./0004-wheel-icon-measured.md) | The wheel, measured off the reference | Implemented — revises 0001's icon section |

@@ -2,16 +2,19 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { WheelIcon } from "@/components/icons";
 
 /**
- * The inbox link in the header cluster, with a count of threads waiting.
+ * The inbox link in the header cluster: the wheel, lit when something's
+ * waiting, with a count beside it.
  *
  * It fetches its own count rather than taking one as a prop. SiteHeader is
  * mounted individually by every page in the app — there's no chrome in
  * layout.tsx — so a prop would mean threading an unread count through seven
  * call sites and seven server queries. Self-fetching is the RidersView
- * precedent, and it's what ADR 0001 settles on for the tell-tale that will
- * eventually sit next to this.
+ * precedent, and it's what ADR 0001 settles on for the tell-tale this is
+ * standing in for. When the notification layer lands, the wheel keeps its
+ * place and widens its source from unread DMs to everything waiting.
  *
  * Only ever rendered for a signed-in rider, so the fetch always has a session.
  */
@@ -51,17 +54,19 @@ export function MessagesLink() {
   return (
     <Link
       href="/messages"
-      className={`flex items-center gap-1.5 font-medium transition-colors hover:text-orange-500 ${
-        unread > 0 ? "text-orange-500" : "text-black/70 dark:text-white/70"
-      }`}
+      aria-label="Messages"
+      // The wheel keeps the header's text ramp in both states. Turning the
+      // whole icon orange would paint over the stripe with the same colour the
+      // stripe is, which is the one thing that mustn't happen — the stripe is
+      // the signal.
+      className="flex items-center gap-1.5 font-medium text-black/70 transition-colors hover:text-orange-500 dark:text-white/70"
     >
-      Messages
+      <WheelIcon lit={unread > 0} size={24} />
+      {/* Beside the wheel, not on it: the stripe says something's waiting, the
+          number says how much. */}
       {unread > 0 && (
-        <span className="rounded-full bg-orange-500 px-1.5 py-0.5 text-xs font-semibold tabular-nums leading-none text-white">
-          {unread}
-        </span>
+        <span className="text-sm font-semibold tabular-nums text-orange-500">{unread}</span>
       )}
-      {/* The count is a number in a pill; this is what says what it counts. */}
       <span role="status" aria-live="polite" className="sr-only">
         {unread > 0 ? `${unread} conversation${unread === 1 ? "" : "s"} waiting` : ""}
       </span>
