@@ -47,16 +47,46 @@ styled with Tailwind CSS.
 ## Getting started
 
 The app targets Postgres everywhere — there's no SQLite fallback, so local dev needs a
-connection string too: a free Neon/Supabase branch, a local `docker run postgres`, or
-`vercel env pull` to borrow the deployed one.
+connection string too: a local Postgres, a free Neon/Supabase branch, or `vercel env pull`
+to borrow the deployed one.
 
 ```bash
 npm install            # postinstall also generates the Prisma client
 cp .env.example .env   # then fill in the two DB URLs and SESSION_SECRET
-npm run db:migrate     # apply migrations
-npm run db:seed        # gear catalog (idempotent) + sample posts
+npx prisma migrate deploy   # apply the existing migrations (see the note below)
+npm run db:seed        # gear catalog + two test riders + sample posts
 npm run dev            # http://localhost:3000
 ```
+
+### A local Postgres, on macOS
+
+```bash
+brew install postgresql@17          # matches the major version Neon runs
+brew services start postgresql@17
+createdb moto && psql -d postgres -c "CREATE ROLE moto LOGIN PASSWORD 'moto'"
+psql -d postgres -c "ALTER DATABASE moto OWNER TO moto"
+```
+
+Then point both URLs at it — there's no pooler in front of a local server, so they're the
+same string:
+
+```
+DATABASE_URL="postgresql://moto:moto@localhost:5432/moto"
+DATABASE_URL_UNPOOLED="postgresql://moto:moto@localhost:5432/moto"
+```
+
+**Applying migrations locally: use `npx prisma migrate deploy`, not `npm run db:migrate`.**
+`db:migrate` is `prisma migrate dev`, which is for *authoring* a new migration — it builds
+a shadow database and compares. `deploy` just applies what's in `prisma/migrations/`, which
+is what a fresh local database needs and what the deploy runs. Related: the Comms migration
+creates a partial unique index that Prisma's schema language can't express (see the note in
+`schema.prisma`), so treat any offer to "fix" it as a false positive.
+
+`npm run db:seed` creates two riders to log in as — **`ada` and `bex`, password
+`testrider123`** — which is what makes it possible to exercise anything needing two
+accounts, direct messages most obviously. The seed refuses to run against a
+`DATABASE_URL` that isn't localhost; the deploy runs `db:seed:catalog`, which is
+catalog-only and mints no accounts.
 
 | Variable                             | Notes                                                        |
 | ------------------------------------ | ------------------------------------------------------------ |
