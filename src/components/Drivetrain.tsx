@@ -85,12 +85,46 @@ function custom(r: Rig, key: string, fn: (t: number) => void, ms: number) {
   startLoop(r);
 }
 
+/* ---------------------------------------------------------------------------
+   The rig lives at module scope, not in a ref.
+
+   layout.tsx carries no chrome, so every page mounts its own SiteHeader and
+   therefore its own Drivetrain. Clicking a gear unmounts the whole thing
+   mid-shift: a ref dies with the component that owns it, so the panel came
+   back closed, the chain came back at phase zero, and prevGear came back
+   already equal to the gear just arrived at — nothing left to shift *from*.
+   The shift this nav is built around had never once been visible on a click.
+
+   Module scope outlives the remount, so the new mount picks the chain up where
+   the old one left it. Safe because exactly one Drivetrain exists at a time:
+   SiteHeader is its only caller, and the two SiteHeaders in comms/[id] are
+   mutually exclusive returns.
+
+   Same fix as the wheel's unread count in MessagesLink, one component over.
+--------------------------------------------------------------------------- */
+const rig: Rig = {
+  open: 0,
+  phase: 0,
+  sag: D.SAG_DRIVE,
+  jolt: { i: -1, dy: 0 },
+  scale: 1,
+  tweens: [],
+  raf: 0,
+  reduced: false,
+  draw: undefined,
+};
+
+/** The gear the chain is actually sitting on, which is what a shift runs from. */
+let lastGear: number | null = null;
+
 export function Drivetrain({ handle }: { handle: string | null }) {
   const pathname = usePathname();
   const gears = D.gearsFor(handle);
   const engaged = D.gearForPath(gears, pathname);
 
-  const [open, setOpen] = useState(false);
+  // Seeded, so arriving mid-shift doesn't slam the panel shut on the frame the
+  // new page mounts.
+  const [open, setOpen] = useState(() => rig.open > 0.5);
 
   const dockRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -103,20 +137,6 @@ export function Drivetrain({ handle }: { handle: string | null }) {
   const labelRefs = useRef<(SVGTextElement | null)[]>([]);
   const tileRefs = useRef<(SVGGElement | null)[]>([]);
 
-  // Everything that animates. Refs, not state: none of it drives a re-render.
-  const rig = useRef<Rig>({
-    open: 0,
-    phase: 0,
-    sag: D.SAG_DRIVE,
-    jolt: { i: -1, dy: 0 },
-    scale: 1,
-    tweens: [],
-    raf: 0,
-    reduced: false,
-    draw: undefined,
-  });
-
-  const prevGear = useRef(engaged);
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastScroll = useRef(0);
   // Per-gear dimming, read by the draw pass — which owns opacity frame to
@@ -125,7 +145,7 @@ export function Drivetrain({ handle }: { handle: string | null }) {
 
   /* ---------------- the draw pass ---------------- */
   useEffect(() => {
-    const r = rig.current;
+    const r = rig;
 
     const draw = () => {
       const k = clamp01(r.open);
@@ -204,14 +224,22 @@ export function Drivetrain({ handle }: { handle: string | null }) {
     };
     measure();
 
+    // Unmounting cancelled the frame but left the tweens on the shared rig, so
+    // a shift interrupted by a navigation is picked up here and finished.
+    if (r.tweens.length) startLoop(r);
+
     const ro = new ResizeObserver(measure);
     if (dockRef.current) ro.observe(dockRef.current);
     return () => {
       ro.disconnect();
       if (r.raf) cancelAnimationFrame(r.raf);
       r.raf = 0;
+      // This one's closure calls setOpen on a component that's going away, and
+      // tweens a rig that isn't. Left running it would shut the panel the next
+      // mount is meant to inherit.
+      if (hoverTimer.current) clearTimeout(hoverTimer.current);
     };
-     
+
   }, []);
 
   // Re-apply the animated values after every commit. React owns the attributes
@@ -220,60 +248,76 @@ export function Drivetrain({ handle }: { handle: string | null }) {
   // to their resting values. Mid-tween the next frame hides that; at rest,
   // nothing would.
   useEffect(() => {
-    rig.current.draw?.();
+    rig.draw?.();
   });
 
   // Signing in or out changes which gears are reachable.
   useEffect(() => {
     dim.current = D.gearsFor(handle).map((g) => (g.href === null && g.auth ? 0.5 : 1));
-    rig.current.draw?.();
+    rig.draw?.();
   }, [handle]);
-
-  /* ---------------- shifting ----------------
-     Driven by the path, not the click, so the chain also runs when you use the
-     back button or land on a page cold. */
-  useEffect(() => {
-    const r = rig.current;
-    const from = prevGear.current;
-    prevGear.current = engaged;
-
-    if (engaged === 0) {
-      // Nothing engaged, so nothing driving: the return run goes slack.
-      tween(r, "sag", D.SAG_LOOSE, 420);
-      tween(r, "phase", r.phase + 6, 420);
-      return;
-    }
-    const start = from === 0 ? engaged : from;
-    const steps = Math.abs(engaged - start);
-    // The chain runs the real distance between the two sprockets.
-    tween(r, "phase", r.phase + (engaged - start) * D.SPAN, 260 + 110 * steps);
-    tween(r, "sag", D.SAG_DRIVE, 300);
-  }, [engaged]);
 
   /* ---------------- open and close ---------------- */
   const setOpenTo = (want: boolean, delay = 0) => {
     if (hoverTimer.current) clearTimeout(hoverTimer.current);
     const go = () => {
       setOpen(want);
-      tween(rig.current, "open", want ? 1 : 0, want ? 300 : 220);
+      tween(rig, "open", want ? 1 : 0, want ? 300 : 220);
     };
     if (delay) hoverTimer.current = setTimeout(go, delay);
     else go();
   };
+
+  /* ---------------- shifting ----------------
+     Driven by the path, not the click, so the chain also runs when you use the
+     back button or land on a page cold.
+
+     Which means it fires on the *arriving* page, after the remount — so `from`
+     has to come from module scope. Read out of a ref it was always the gear
+     just arrived at, and every shift ran a distance of zero. */
+  useEffect(() => {
+    const r = rig;
+    const from = lastGear ?? engaged;
+    lastGear = engaged;
+
+    // However the shift happened, if the panel is still up when it lands then
+    // it's up to be watched. Closing is what the click used to schedule before
+    // navigating; scheduling it here instead means it waits for the chain
+    // rather than for a guess at how long the page would take.
+    const closeAfter = (ms: number) => {
+      if (r.open > 0) setOpenTo(false, ms);
+    };
+
+    if (engaged === 0) {
+      // Nothing engaged, so nothing driving: the return run goes slack.
+      tween(r, "sag", D.SAG_LOOSE, 420);
+      tween(r, "phase", r.phase + 6, 420);
+      closeAfter(420);
+      return;
+    }
+    const start = from === 0 ? engaged : from;
+    const steps = Math.abs(engaged - start);
+    // The chain runs the real distance between the two sprockets.
+    const ms = 260 + 110 * steps;
+    tween(r, "phase", r.phase + (engaged - start) * D.SPAN, ms);
+    tween(r, "sag", D.SAG_DRIVE, 300);
+    closeAfter(ms + 140);
+
+  }, [engaged]);
 
   useEffect(() => {
     // Reading, not navigating. Also stops the panel flapping open under a
     // cursor that happens to be resting on it while the feed moves.
     const onScroll = () => {
       lastScroll.current = performance.now();
-      if (rig.current.open > 0) setOpenTo(false);
+      if (rig.open > 0) setOpenTo(false);
     };
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && rig.current.open > 0) setOpenTo(false);
+      if (e.key === "Escape" && rig.open > 0) setOpenTo(false);
     };
     // Touch has no pointer-leave to close on, so anywhere else does it.
     const onDown = (e: PointerEvent) => {
-      if (rig.current.open > 0 && !panelRef.current?.contains(e.target as Node)) {
+      if (rig.open > 0 && !panelRef.current?.contains(e.target as Node)) {
         setOpenTo(false);
       }
     };
@@ -292,7 +336,7 @@ export function Drivetrain({ handle }: { handle: string | null }) {
   // jolt goes into the rig rather than onto the node, because the draw pass
   // rewrites every sprocket transform on the same frame.
   const grind = (i: number) => {
-    const r = rig.current;
+    const r = rig;
     if (r.reduced) return;
     const start = r.phase;
     custom(
@@ -541,13 +585,17 @@ export function Drivetrain({ handle }: { handle: string | null }) {
                   // No hover to open with, so on a touch screen the first tap
                   // opens the panel and the second picks a gear — 40px is too
                   // tight to aim at once.
-                  if (window.matchMedia("(hover: none)").matches && rig.current.open < 0.5) {
+                  if (window.matchMedia("(hover: none)").matches && rig.open < 0.5) {
                     e.preventDefault();
                     setOpenTo(true);
                     return;
                   }
-                  // Let the shift land before the room goes.
-                  setOpenTo(false, 380);
+                  // A gear that isn't the one engaged closes itself once the
+                  // shift lands — see the shifting effect. Closing here on a
+                  // timer instead is what used to shut the panel before the
+                  // page had even arrived. Tapping the gear you're already in
+                  // shifts nothing, so it still needs closing from here.
+                  if (gear.n === engaged) setOpenTo(false, 380);
                 }}
               />
             );
