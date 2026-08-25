@@ -24,8 +24,27 @@ import { WheelIcon } from "@/components/icons";
 // thread you're actually watching updates in three seconds.
 const POLL_MS = 20000;
 
-export function MessagesLink() {
-  const [unread, setUnread] = useState(0);
+/**
+ * The last count this tab saw, kept at module scope.
+ *
+ * Every page mounts its own SiteHeader, so walking the drivetrain from one page
+ * to the next unmounts this component and mounts a fresh one. Starting that new
+ * one at zero puts the wheel out for as long as the fetch takes, and the ride
+ * through the nav is a wheel going dark and lighting again at every stop.
+ *
+ * A ref wouldn't help — it's destroyed with the component it belongs to. Module
+ * scope is what outlives a remount, and it lives as long as the tab does.
+ *
+ * Kept with the handle it belongs to, so logging out and back in as someone
+ * else doesn't flash the last rider's count at the new one before the first
+ * fetch corrects it.
+ */
+let lastSeen: { handle: string; unread: number } | null = null;
+
+export function MessagesLink({ handle }: { handle: string }) {
+  const [unread, setUnread] = useState(() =>
+    lastSeen?.handle === handle ? lastSeen.unread : 0,
+  );
 
   useEffect(() => {
     let active = true;
@@ -35,21 +54,26 @@ export function MessagesLink() {
         const res = await fetch("/api/messages/unread");
         if (!res.ok) return;
         const data = await res.json();
-        if (active && typeof data.unread === "number") setUnread(data.unread);
+        if (typeof data.unread !== "number") return;
+        // Written whether or not this component is still mounted: navigating
+        // away mid-flight is exactly when the answer is worth keeping.
+        lastSeen = { handle, unread: data.unread };
+        if (active) setUnread(data.unread);
       } catch {
         /* transient — the next tick retries */
       }
     }
 
-    // Once now, then on the tick: the badge has to be right when the page
-    // loads, not twenty seconds later.
+    // Once now, then on the tick. The seeded count above is what the wheel
+    // shows in the meantime, so this is correcting a value rather than filling
+    // in a blank.
     load();
     const id = setInterval(load, POLL_MS);
     return () => {
       active = false;
       clearInterval(id);
     };
-  }, []);
+  }, [handle]);
 
   return (
     <Link
