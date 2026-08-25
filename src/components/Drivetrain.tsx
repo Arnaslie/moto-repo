@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import * as D from "@/lib/drivetrain";
 
 /* ---------------------------------------------------------------------------
@@ -27,6 +27,17 @@ import * as D from "@/lib/drivetrain";
      so the resting state is in the server HTML and hydration has nothing to
      disagree about.
 --------------------------------------------------------------------------- */
+
+/**
+ * The draw pass has to run before the browser paints, not after.
+ *
+ * React owns the attributes it writes over, so on the frame a new page mounts
+ * the panel is rendered at its resting height and `--grow` isn't set yet. As a
+ * passive effect the correction lands one painted frame late, which is a visible
+ * flick of the panel collapsing and reopening mid-shift. useLayoutEffect closes
+ * that gap; the alias is so it doesn't warn while this renders on the server.
+ */
+const useDrawEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
 
 const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
@@ -117,6 +128,18 @@ const rig: Rig = {
 /** The gear the chain is actually sitting on, which is what a shift runs from. */
 let lastGear: number | null = null;
 
+/**
+ * Scroll events before this are the navigation's own, not the reader's.
+ *
+ * Module scope for the same reason as the rig: the click that starts a
+ * navigation and the scroll-to-top that ends it happen either side of a
+ * remount, so a component-local value would never see both.
+ */
+let ignoreScrollUntil = 0;
+
+/** Long enough to cover a navigation and its scroll restoration. */
+const NAV_SCROLL_GRACE = 900;
+
 export function Drivetrain({ handle }: { handle: string | null }) {
   const pathname = usePathname();
   const gears = D.gearsFor(handle);
@@ -144,7 +167,7 @@ export function Drivetrain({ handle }: { handle: string | null }) {
   const dim = useRef<number[]>(gears.map(() => 1));
 
   /* ---------------- the draw pass ---------------- */
-  useEffect(() => {
+  useDrawEffect(() => {
     const r = rig;
 
     const draw = () => {
@@ -247,7 +270,7 @@ export function Drivetrain({ handle }: { handle: string | null }) {
   // so a re-render for any reason — a shift, a session change — snaps them back
   // to their resting values. Mid-tween the next frame hides that; at rest,
   // nothing would.
-  useEffect(() => {
+  useDrawEffect(() => {
     rig.draw?.();
   });
 
@@ -288,6 +311,10 @@ export function Drivetrain({ handle }: { handle: string | null }) {
       if (r.open > 0) setOpenTo(false, ms);
     };
 
+    // Armed on the click too, but a shift can arrive by back button, and the
+    // scroll restoration can land either side of this effect.
+    if (r.open > 0) ignoreScrollUntil = performance.now() + NAV_SCROLL_GRACE;
+
     if (engaged === 0) {
       // Nothing engaged, so nothing driving: the return run goes slack.
       tween(r, "sag", D.SAG_LOOSE, 420);
@@ -309,6 +336,11 @@ export function Drivetrain({ handle }: { handle: string | null }) {
     // Reading, not navigating. Also stops the panel flapping open under a
     // cursor that happens to be resting on it while the feed moves.
     const onScroll = () => {
+      // Except when the scroll *is* the navigating. Arriving on a new page
+      // puts you back at the top, and that lands as a scroll event like any
+      // other — which shut the panel a frame or two after the new page mounted
+      // and took the shift with it. That's the nav moving, not the reader.
+      if (performance.now() < ignoreScrollUntil) return;
       lastScroll.current = performance.now();
       if (rig.open > 0) setOpenTo(false);
     };
@@ -596,6 +628,7 @@ export function Drivetrain({ handle }: { handle: string | null }) {
                   // page had even arrived. Tapping the gear you're already in
                   // shifts nothing, so it still needs closing from here.
                   if (gear.n === engaged) setOpenTo(false, 380);
+                  else ignoreScrollUntil = performance.now() + NAV_SCROLL_GRACE;
                 }}
               />
             );
