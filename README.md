@@ -33,6 +33,14 @@ styled with Tailwind CSS.
   Route-split so the ~900 KB 3D bundle only loads on `/showroom`.
 - **Rider map** — Leaflet map of riders currently sharing their location, with a toggle to
   go invisible.
+- **Messages** — 1:1 direct messages between riders, started from the Message button on
+  someone's profile. A thread is keyed by the two rider ids sorted and joined, unique in
+  the database, so two people opening one on each other at the same moment land in the
+  same conversation rather than two. Unread is a per-side counter on the thread, not a
+  flag per message: forty messages from one rider is one conversation waiting for you, and
+  that's what the header badge counts. Sending is optimistic; new messages arrive on a
+  3-second poll (see [docs/adr/0003](./docs/adr/0003-direct-messages-polled.md) for why
+  that isn't a socket, and what would replace it).
 - **Image uploads** — straight from the browser to Vercel Blob in production, to a private
   local directory in dev (see [Uploads](#uploads) below).
 
@@ -80,6 +88,7 @@ src/
     login/ · signup/             # auth pages
     profile/[handle]/            # profile: avatar, customizer, garage, posts
     riders/                      # live rider map
+    messages/ · messages/[id]/   # DM inbox and thread
     showroom/[id]/               # 3D bike showroom
     media/[file]/route.ts        # serves disk-backed uploads at request time
     api/
@@ -92,6 +101,11 @@ src/
       avatar/                    # POST: save skin + equipped gear
       motorcycles/ · [id]/       # POST add a bike, DELETE remove one
       locations/                 # GET riders sharing, POST your position
+      messages/conversations/    # GET the inbox, POST to open a thread
+        [id]/                    # GET the thread (?after= for the poll)
+        [id]/messages/           # POST a message
+        [id]/read/               # POST to clear your unread count
+      messages/unread/           # GET what the header badge polls
   components/
     Feed.tsx · Composer.tsx · PostCard.tsx
     PostFooter.tsx                        # action row + ticker (shared state)
@@ -102,14 +116,18 @@ src/
     Garage.tsx · showroom/                # bikes + three.js canvas
     RiderMap.tsx · RidersView.tsx         # Leaflet (dynamic import, no SSR)
     AuthForm.tsx · SiteHeader.tsx
+    messages/                             # Inbox, Thread, the profile button,
+                                          #   and the header's unread link
   lib/
-    prisma.ts · session.ts · uploads.ts   # server-only
-    auth.ts · comments.ts · drivetrain.ts · format.ts · gear.ts
-    locations.ts · motorcycles.ts · posts.ts · types.ts · waves.ts
+    prisma.ts · session.ts · uploads.ts · thread.ts   # server-only
+    auth.ts · comments.ts · conversations.ts · drivetrain.ts · format.ts
+    gear.ts · locations.ts · messages.ts · motorcycles.ts · posts.ts
+    types.ts · waves.ts
 prisma/
   schema.prisma                  # Post, Wave, Comment, User, GearItem, UserGear,
-                                 #   Motorcycle, Location
-  migrations/                    # one Postgres init migration
+                                 #   Motorcycle, Location, Room, Conversation,
+                                 #   Participant, Message
+  migrations/                    # the Postgres init, then one per feature
   gear-catalog.ts                # the catalog rows, shared by both seeds
   seed.ts                        # catalog + sample posts (local)
   seed-catalog.ts                # catalog only, run on deploy
@@ -132,9 +150,14 @@ computed on the server too, so its resting state ships in the HTML.
 | `UserGear`   | Who owns which gear item, and whether it's equipped                    |
 | `Motorcycle` | A bike in someone's garage                                             |
 | `Location`   | A rider's most recent shared position (one row per rider, upserted)    |
+| `Conversation` | A 1:1 DM thread, keyed by a unique sorted pair of user ids           |
+| `Participant`  | One side of a thread — holds that side's unread count and read mark  |
+| `Message`      | A line in a thread, always tied to a real `User`                     |
 
 `Post.author` is denormalized and `Post.userId` is nullable so seeded and anonymous posts
-still render.
+still render. `Message` goes the other way and joins its sender rather than copying the
+handle onto every row, so a rider who changes handle isn't quoted under the old one — the
+newer of the two preferences, and the one to follow in new models.
 
 The eight SQLite migrations were replaced by a single Postgres init migration when storage
 moved — nothing was lost, as they held only DDL. The move is one-way: Prisma binds a
