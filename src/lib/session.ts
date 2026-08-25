@@ -60,8 +60,9 @@ export async function getCurrentUser() {
   // Cookie writes throw during a server-component render, so best-effort only.
   if (!user) {
     try {
+      // No save() after destroy() — see the note in api/auth/logout. destroy()
+      // writes the expiring cookie itself; saving would put a fresh one back.
       session.destroy();
-      await session.save();
     } catch {
       /* not in a writable context — ignore */
     }
