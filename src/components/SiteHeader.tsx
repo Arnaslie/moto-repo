@@ -8,13 +8,28 @@ import { PodFilter } from "./PodFilter";
 
 export type HeaderUser = { handle: string; displayName: string | null } | null;
 
-export function SiteHeader({ user }: { user: HeaderUser }) {
+export function SiteHeader({
+  user,
+  // Rendered by the layout so the wheel is right in the HTML rather than a
+  // moment after it. Zero for a signed-out viewer, who has no wheel anyway.
+  initialUnread = 0,
+}: {
+  user: HeaderUser;
+  initialUnread?: number;
+}) {
   const router = useRouter();
 
   async function logout() {
     await fetch("/api/auth/logout", { method: "POST" });
-    router.refresh();
+    // Navigate first, refresh second, and not the other way round. The header
+    // lives in the app layout now, and a layout is cached on the client and
+    // reused across navigations — which is what stops it blinking, and also
+    // what makes it show a signed-out rider their own handle if the cache
+    // isn't cleared. A refresh issued *before* the push is cancelled by it and
+    // the stale tree comes straight back out of the cache; issued after, it
+    // invalidates the one you landed on. Measured, both ways, 6 times each.
     router.push("/");
+    router.refresh();
   }
 
   return (
@@ -32,7 +47,7 @@ export function SiteHeader({ user }: { user: HeaderUser }) {
         <div className="flex shrink-0 items-center gap-2 text-sm">
           {user ? (
             <>
-              <MessagesLink handle={user.handle} />
+              <MessagesLink handle={user.handle} initialUnread={initialUnread} />
               <Link
                 href={`/profile/${user.handle}`}
                 className="font-medium text-black/70 hover:text-orange-500 dark:text-white/70"

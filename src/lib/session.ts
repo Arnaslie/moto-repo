@@ -1,5 +1,6 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
+import { cache } from "react";
 import { getIronSession, type SessionOptions } from "iron-session";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
@@ -39,7 +40,12 @@ export async function getSession() {
 
 // The currently authenticated user, or null. Safe to call in server
 // components and route handlers.
-export async function getCurrentUser() {
+//
+// Wrapped in cache() so it's one query per request no matter how many callers
+// there are. The app layout asks for the header's rider and the page below it
+// usually asks again for its own reasons; without this that's two identical
+// lookups on every render.
+export const getCurrentUser = cache(async function getCurrentUser() {
   const session = await getSession();
   if (!session.userId) return null;
 
@@ -70,7 +76,7 @@ export async function getCurrentUser() {
   }
 
   return user;
-}
+});
 
 // The guest id a signed-out visitor waves under, if they already have one.
 // Read-only, so it's safe in a server component. Null means they've never

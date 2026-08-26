@@ -1,7 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/session";
-import { SiteHeader } from "@/components/SiteHeader";
 import { Thread } from "@/components/messages/Thread";
 import {
   conversationSelect,
@@ -39,13 +38,10 @@ export default async function ThreadPage({
   const messages = await prisma.message.findMany(threadMessagesQuery(id));
 
   return (
-    <main className="mx-auto min-h-screen w-full max-w-xl border-x border-black/10 dark:border-white/10">
-      <SiteHeader user={{ handle: user.handle, displayName: user.displayName }} />
-      <Thread
-        conversation={serializeConversation(conversation, user.id)}
-        initialMessages={messages.map(serializeMessage)}
-        me={user.handle}
-      />
-    </main>
+    <Thread
+      conversation={serializeConversation(conversation, user.id)}
+      initialMessages={messages.map(serializeMessage)}
+      me={user.handle}
+    />
   );
 }
