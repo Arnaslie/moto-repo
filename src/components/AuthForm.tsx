@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { PodFilter } from "./PodFilter";
 
 export function AuthForm({
   mode,
@@ -55,7 +56,7 @@ export function AuthForm({
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-sm flex-col justify-center px-6">
       <Link href="/" className="mb-6 flex items-center gap-2 text-2xl font-bold tracking-tight">
-        <span aria-hidden>🏍️</span>
+        <PodFilter size={34} />
         moto<span className="text-orange-500">repo</span>
       </Link>
       <h1 className="mb-1 text-xl font-bold">

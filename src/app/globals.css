@@ -41,6 +41,18 @@
   --drive-accent-soft: rgba(249, 115, 22, 0.12);
 }
 
+/* ---------------------------------------------------------------------------
+   The pod filter in the wordmark.
+
+   One line weight, one colour, no fills — so it sits on whatever's behind it,
+   including the header's translucent ground, without punching a hole in it.
+   The brand orange carries both schemes the same way --drive-accent does, so
+   unlike the rest of the palette this one needs no dark-mode counterpart.
+--------------------------------------------------------------------------- */
+:root {
+  --pod-line: #f97316;
+}
+
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0a0a0a;
