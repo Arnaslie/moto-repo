@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser, getWaveViewer } from "@/lib/session";
-import { SiteHeader } from "@/components/SiteHeader";
 import { Avatar, type EquippedItem } from "@/components/Avatar";
 import { AvatarCustomizer, type OwnedItem } from "@/components/AvatarCustomizer";
 import { PostCard } from "@/components/PostCard";
@@ -38,9 +37,6 @@ export default async function ProfilePage({
   if (!user) notFound();
 
   const isOwner = viewer?.id === user.id;
-  const headerUser = viewer
-    ? { handle: viewer.handle, displayName: viewer.displayName }
-    : null;
 
   const equipped: EquippedItem[] = user.gear
     .filter((g) => g.equipped)
@@ -56,9 +52,7 @@ export default async function ProfilePage({
   });
 
   return (
-    <main className="mx-auto min-h-screen w-full max-w-xl border-x border-black/10 dark:border-white/10">
-      <SiteHeader user={headerUser} />
-
+    <>
       <section className="border-b border-black/10 px-4 py-5 dark:border-white/10">
         <div className="flex items-center gap-4">
           <div className="overflow-hidden rounded-2xl ring-1 ring-black/10 dark:ring-white/10">
@@ -137,6 +131,6 @@ export default async function ProfilePage({
           ))
         )}
       </div>
-    </main>
+    </>
   );
 }

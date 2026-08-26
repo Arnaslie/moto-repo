@@ -1,6 +1,5 @@
 import { prisma } from "@/lib/prisma";
 import { Feed } from "@/components/Feed";
-import { SiteHeader } from "@/components/SiteHeader";
 import { getCurrentUser, getWaveViewer } from "@/lib/session";
 import { postInclude, serializePost } from "@/lib/posts";
 import { blobUploadsEnabled } from "@/lib/uploads";
@@ -20,16 +19,11 @@ export default async function Home() {
 
   const initialPosts = rows.map(serializePost);
 
-  const headerUser = user ? { handle: user.handle, displayName: user.displayName } : null;
-
   return (
-    <main className="mx-auto min-h-screen w-full max-w-xl border-x border-black/10 dark:border-white/10">
-      <SiteHeader user={headerUser} />
-      <Feed
-        initialPosts={initialPosts}
-        currentUser={user ? { handle: user.handle } : null}
-        blobUploads={blobUploadsEnabled()}
-      />
-    </main>
+    <Feed
+      initialPosts={initialPosts}
+      currentUser={user ? { handle: user.handle } : null}
+      blobUploads={blobUploadsEnabled()}
+    />
   );
 }

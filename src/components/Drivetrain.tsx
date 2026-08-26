@@ -99,18 +99,22 @@ function custom(r: Rig, key: string, fn: (t: number) => void, ms: number) {
 /* ---------------------------------------------------------------------------
    The shift runs before the navigation, not across it.
 
-   layout.tsx carries no chrome, so every page mounts its own SiteHeader and
-   therefore its own Drivetrain. A gear click used to navigate immediately,
-   which unmounted the component the animation was running in — so the chain
-   never got to turn. Carrying the rig across that remount was one way out and
-   it worked, but only by making the animation depend on state surviving a
-   teardown, and on nothing else closing the panel in between. Something always
-   was: the arriving page's scroll-to-top, for one.
+   This was written when every page mounted its own SiteHeader and therefore its
+   own Drivetrain, so a gear click that navigated immediately unmounted the
+   component the animation was running in and the chain never got to turn.
+   Carrying the rig across that remount was one way out and it worked, but only
+   by making the animation depend on state surviving a teardown, and on nothing
+   else closing the panel in between. Something always was: the arriving page's
+   scroll-to-top, for one. So a real gear was made to do what the placeholder
+   gears do — run the animation in a component that is staying put — and only
+   then go.
 
-   The placeholder gears never had the problem, because grinding at you doesn't
-   navigate. So a real gear now does what they do — run the animation in a
-   component that is staying put — and only then goes. Nothing has to survive
-   anything, and the panel on the far side is a fresh one at rest.
+   The chrome now lives in app/(app)/layout.tsx and this component doesn't
+   unmount on an in-app navigation at all, so the teardown it was avoiding no
+   longer happens. The order stays: running the shift where you can see it
+   finish, and navigating when it's done, is the behaviour that was wanted — it
+   just no longer depends on the remount to enforce it. The panel is closed
+   explicitly on the way out, which is what a layout that persists requires.
 --------------------------------------------------------------------------- */
 
 export function Drivetrain({ handle }: { handle: string | null }) {

@@ -1,5 +1,4 @@
 import { redirect } from "next/navigation";
-import { SiteHeader } from "@/components/SiteHeader";
 import { Inbox } from "@/components/messages/Inbox";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/session";
@@ -24,12 +23,9 @@ export default async function MessagesPage() {
   const conversations = await prisma.conversation.findMany(inboxQuery(user.id));
 
   return (
-    <main className="mx-auto min-h-screen w-full max-w-xl border-x border-black/10 dark:border-white/10">
-      <SiteHeader user={{ handle: user.handle, displayName: user.displayName }} />
-      <Inbox
-        initialConversations={conversations.map((c) => serializeConversation(c, user.id))}
-        me={user.handle}
-      />
-    </main>
+    <Inbox
+      initialConversations={conversations.map((c) => serializeConversation(c, user.id))}
+      me={user.handle}
+    />
   );
 }

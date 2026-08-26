@@ -8,13 +8,13 @@ import { WheelIcon } from "@/components/icons";
  * The inbox link in the header cluster: the wheel, lit when something's
  * waiting, with a count beside it.
  *
- * It fetches its own count rather than taking one as a prop. SiteHeader is
- * mounted individually by every page in the app — there's no chrome in
- * layout.tsx — so a prop would mean threading an unread count through seven
- * call sites and seven server queries. Self-fetching is the RidersView
- * precedent, and it's what ADR 0001 settles on for the tell-tale this is
- * standing in for. When the notification layer lands, the wheel keeps its
- * place and widens its source from unread DMs to everything waiting.
+ * It owns its count after first paint — polling for it, per ADR 0001 and the
+ * RidersView precedent — but it no longer opens at zero. The layout renders the
+ * opening count into the HTML and hands it down. 0001 turned that down as a
+ * prop through seven call sites; the layout made it one, and it's what stops
+ * the wheel arriving dark on a hard load. When the notification layer lands,
+ * the wheel keeps its place and widens its source from unread DMs to
+ * everything waiting.
  *
  * Only ever rendered for a signed-in rider, so the fetch always has a session.
  */
@@ -27,13 +27,16 @@ const POLL_MS = 20000;
 /**
  * The last count this tab saw, kept at module scope.
  *
- * Every page mounts its own SiteHeader, so walking the drivetrain from one page
- * to the next unmounts this component and mounts a fresh one. Starting that new
- * one at zero puts the wheel out for as long as the fetch takes, and the ride
- * through the nav is a wheel going dark and lighting again at every stop.
+ * This used to carry the count across every navigation in the app, because
+ * every page mounted its own header and tore this component down with it. The
+ * layout owns the header now, so an in-app navigation doesn't remount anything
+ * and there's nothing left to carry there.
  *
- * A ref wouldn't help — it's destroyed with the component it belongs to. Module
- * scope is what outlives a remount, and it lives as long as the tab does.
+ * It stays for the remounts that are left: login and signup sit outside the
+ * app group, so signing in and landing on the feed does build a fresh one, and
+ * that's a common enough trip to be worth not blinking through. A ref still
+ * wouldn't do it — a ref is destroyed with the component that owns it. Module
+ * scope outlives a remount and lives as long as the tab.
  *
  * Kept with the handle it belongs to, so logging out and back in as someone
  * else doesn't flash the last rider's count at the new one before the first
@@ -41,9 +44,20 @@ const POLL_MS = 20000;
  */
 let lastSeen: { handle: string; unread: number } | null = null;
 
-export function MessagesLink({ handle }: { handle: string }) {
+export function MessagesLink({
+  handle,
+  initialUnread,
+}: {
+  handle: string;
+  initialUnread: number;
+}) {
+  // What this tab last saw wins over what the server rendered, when it's this
+  // rider's. Both are current on a hard load — lastSeen is null there — but the
+  // layout is cached on the client, so a header rebuilt from that cache can
+  // carry a count from whenever the cache was filled. The tab's own last answer
+  // can't be older than that.
   const [unread, setUnread] = useState(() =>
-    lastSeen?.handle === handle ? lastSeen.unread : 0,
+    lastSeen?.handle === handle ? lastSeen.unread : initialUnread,
   );
 
   useEffect(() => {
