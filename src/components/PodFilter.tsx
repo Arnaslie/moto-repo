@@ -11,9 +11,10 @@
 
    Everything is still projected through one camera. Every circle on the part
    becomes an ellipse with the same ry/rx, so no two parts look drawn from
-   different angles, and the lean is a rigid rotation of the finished
-   projection — which is the camera rolled, not the part distorted. That's why
-   it can be one transform on the whole group and nothing needs redrawing.
+   different angles, and turning it over onto its cap and leaning it is a rigid
+   rotation of the finished projection — the camera rolled, not the part
+   distorted. That's why it can be one transform on the whole group and nothing
+   needs redrawing.
 
    The pleats are the part that has to be right. They sit evenly spaced in
    *angle* around the media, so from the side the spacing goes as sin θ and
@@ -37,8 +38,17 @@ const CY = 12;
 /** ry/rx for every ellipse on the part — one camera, tipped just above the axis. */
 const TILT = 0.28;
 
-/** Degrees of lean, counter-clockwise. The whole mark rides one rotation. */
+/* The whole mark rides one rotation, and it does two things at once. The part
+   is built cap-up, because that's the end its heights are measured down from;
+   the mark wants it cap-down and leaned, so SPIN turns it over and leans it in
+   the same move. Both are rigid — the camera rolled, not the part distorted —
+   which is why neither needs a line of the geometry redrawn. */
+
+/** Degrees of lean, counter-clockwise, once it's the right way up. */
 const LEAN = 22;
+
+/** What actually gets applied: over onto its cap, then leaned. */
+const SPIN = 180 - LEAN;
 
 // Radii. Off an RE-series pod: the media tapers ~20% over its length and the
 // cap overhangs it.
@@ -108,14 +118,14 @@ const PLEATS = Array.from({ length: PLEAT_COUNT }, (_, i) => {
   return `M ${xTop.toFixed(2)} ${yTop.toFixed(2)} L ${xBot.toFixed(2)} ${yBot.toFixed(2)}`;
 });
 
-/* Centre the part, shrink it just enough that the leaned box still clears the
-   viewBox with room for the stroke, then lean it. Derived rather than dialled
+/* Centre the part, shrink it just enough that the spun box still clears the
+   viewBox with room for the stroke, then spin it. Derived rather than dialled
    in, so LEAN is a knob you can turn without the mark falling off its edges. */
 const PLACE = (() => {
   const top = Y_CAP_TOP - ry(R_CAP_FACE);
   const bot = Y_BASE_BOT + ry(R_BODY);
   const mid = (top + bot) / 2;
-  const rad = (LEAN * Math.PI) / 180;
+  const rad = (SPIN * Math.PI) / 180;
   const halfH = (bot - top) / 2;
   const sin = Math.abs(Math.sin(rad));
   const cos = Math.abs(Math.cos(rad));
@@ -126,7 +136,7 @@ const PLACE = (() => {
     1
   );
   return (
-    `rotate(${-LEAN} ${CX} ${CY}) translate(${CX} ${CY}) scale(${fit.toFixed(4)}) ` +
+    `rotate(${SPIN} ${CX} ${CY}) translate(${CX} ${CY}) scale(${fit.toFixed(4)}) ` +
     `translate(${-CX} ${-CY}) translate(0 ${(CY - mid).toFixed(3)})`
   );
 })();
