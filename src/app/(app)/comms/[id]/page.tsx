@@ -2,7 +2,6 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/session";
-import { SiteHeader } from "@/components/SiteHeader";
 import { RoomHeader } from "@/components/comms/RoomHeader";
 import { roomSelect, serializeRoom } from "@/lib/rooms";
 import { SEATS, topicLabel } from "@/lib/comms";
@@ -27,29 +26,25 @@ export default async function RoomPage({ params }: { params: Promise<{ id: strin
 
   if (room.closedAt) {
     return (
-      <main className="mx-auto min-h-screen w-full max-w-xl border-x border-black/10 dark:border-white/10">
-        <SiteHeader user={{ handle: user.handle, displayName: user.displayName }} />
-        <div className="px-6 py-14 text-center">
-          <p className="text-base font-semibold">That room has closed.</p>
-          <p className="mt-2 text-sm text-black/50 dark:text-white/50">
-            Rooms end when their host does. Something else might be running.
-          </p>
-          <Link
-            href="/comms"
-            className="mt-5 inline-flex rounded-full bg-orange-500 px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-orange-600"
-          >
-            Back to Comms
-          </Link>
-        </div>
-      </main>
+      <div className="px-6 py-14 text-center">
+        <p className="text-base font-semibold">That room has closed.</p>
+        <p className="mt-2 text-sm text-black/50 dark:text-white/50">
+          Rooms end when their host does. Something else might be running.
+        </p>
+        <Link
+          href="/comms"
+          className="mt-5 inline-flex rounded-full bg-orange-500 px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-orange-600"
+        >
+          Back to Comms
+        </Link>
+      </div>
     );
   }
 
   const isHost = room.hostId === user.id;
 
   return (
-    <main className="mx-auto min-h-screen w-full max-w-xl border-x border-black/10 dark:border-white/10">
-      <SiteHeader user={{ handle: user.handle, displayName: user.displayName }} />
+    <>
       <RoomHeader room={serializeRoom(room)} isHost={isHost} />
 
       {/* The floor, the pack and the chat land here in the next steps. Showing
@@ -78,6 +73,6 @@ export default async function RoomPage({ params }: { params: Promise<{ id: strin
           which is as far as step one goes.
         </p>
       </div>
-    </main>
+    </>
   );
 }
