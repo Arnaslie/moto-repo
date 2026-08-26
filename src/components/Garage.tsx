@@ -3,6 +3,7 @@
 import { useId, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { PodFilter } from "./PodFilter";
 import {
   COMMON_MAKES,
   MAKE_MAX,
@@ -78,7 +79,7 @@ export function Garage({
     <section className="border-b border-black/10 px-4 py-4 dark:border-white/10">
       <div className="mb-3 flex items-center justify-between">
         <h3 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-black/50 dark:text-white/50">
-          <span aria-hidden>🏍️</span> Garage
+          <PodFilter size={18} /> Garage
           {bikes.length > 0 && (
             <span className="text-black/40 dark:text-white/40">({bikes.length})</span>
           )}

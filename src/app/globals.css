@@ -41,6 +41,27 @@
   --drive-accent-soft: rgba(249, 115, 22, 0.12);
 }
 
+/* ---------------------------------------------------------------------------
+   The pod filter in the wordmark.
+
+   Moulded rubber at both ends, oiled media between, and a machined inlet
+   flange under the base ring. The media is the brand orange rather than K&N
+   red, which is the one liberty the drawing takes; everything else is the
+   colour the part is.
+
+   Dark mode can't just keep these. Black rubber on a black page is a hole, so
+   both rubber tones come up to a charcoal that still reads as rubber against
+   the ground, and the flange goes the other way — down off white, which at
+   this size was reading as a glow under the part rather than metal.
+--------------------------------------------------------------------------- */
+:root {
+  --pod-media: #f97316;
+  --pod-pleat: #b8500a;
+  --pod-rubber: #2b2f34;
+  --pod-rubber-face: #454c53;
+  --pod-inlet: #a9b3bd;
+}
+
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0a0a0a;
@@ -59,6 +80,12 @@
     --drive-accent-edge: #c2560c;
     --drive-accent-text: #fb923c;
     --drive-accent-soft: rgba(249, 115, 22, 0.14);
+
+    --pod-media: #f97316;
+    --pod-pleat: #a8480a;
+    --pod-rubber: #3a4147;
+    --pod-rubber-face: #5a636c;
+    --pod-inlet: #8b949d;
   }
 }
 

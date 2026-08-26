@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Drivetrain } from "./Drivetrain";
 import { MessagesLink } from "./messages/MessagesLink";
+import { PodFilter } from "./PodFilter";
 
 export type HeaderUser = { handle: string; displayName: string | null } | null;
 
@@ -21,7 +22,7 @@ export function SiteHeader({ user }: { user: HeaderUser }) {
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="flex items-center gap-2 text-xl font-bold tracking-tight">
-            <span aria-hidden>🏍️</span>
+            <PodFilter size={26} />
             moto<span className="text-orange-500">repo</span>
           </h1>
           <p className="text-sm text-black/50 dark:text-white/50">
