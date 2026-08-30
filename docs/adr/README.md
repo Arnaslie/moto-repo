@@ -17,3 +17,4 @@ editing history — the wrong turns are half of what makes the file worth keepin
 | [0003](./0003-direct-messages-polled.md) | Direct messages, polled | Implemented |
 | [0004](./0004-wheel-icon-measured.md) | The wheel, measured off the reference | Implemented — revises 0001's icon section |
 | [0005](./0005-chrome-in-a-layout.md) | The chrome moves into a layout | Implemented — revises 0001's reasoning about where the header lives |
+| [0006](./0006-seat-height-fit.md) | Seat height fit, measured off the rider | Partly implemented — fit check built, rider reports not |
