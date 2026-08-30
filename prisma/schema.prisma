@@ -31,8 +31,9 @@ model Post {
   userId String?
   user   User?   @relation(fields: [userId], references: [id])
 
-  comments Comment[]
-  waves    Wave[]
+  comments      Comment[]
+  waves         Wave[]
+  notifications Notification[]
 
   @@index([createdAt])
 }
@@ -79,6 +80,8 @@ model Comment {
   post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  notifications Notification[]
+
   @@index([postId, createdAt])
 }
 
@@ -98,14 +101,14 @@ model Location {
 }
 
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  handle       String   @unique
+  id           String  @id @default(cuid())
+  email        String  @unique
+  handle       String  @unique
   displayName  String?
   bio          String?
   passwordHash String
   // Base avatar skin tone (hex). Equipped gear layers on top of this.
-  avatarSkin   String   @default("#c68642")
+  avatarSkin   String  @default("#c68642")
 
   // Inseam in whole millimetres — the measurement that decides whether a rider
   // can get a foot down (ADR 0006). Height is not a substitute: two riders of
@@ -123,7 +126,7 @@ model User {
   // borderline flag: wide spread means "go sit on one", not a verdict.
   inseamSpreadMm Int?
 
-  createdAt    DateTime @default(now())
+  createdAt DateTime @default(now())
 
   posts         Post[]
   comments      Comment[]
@@ -133,6 +136,11 @@ model User {
   rooms         Room[]
   conversations Participant[]
   messages      Message[]
+
+  // Both ends of every notification, which is why they need naming: without the
+  // relation names Prisma can't tell which foreign key is which.
+  notificationsReceived Notification[] @relation("NotificationRecipient")
+  notificationsActed    Notification[] @relation("NotificationActor")
 }
 
 // A voice room in Comms — the intercom. Opened by a rider, who is its host:
@@ -290,4 +298,59 @@ model Message {
   // Both of the thread's queries: render it oldest-first, and fetch "anything
   // after this timestamp" on each poll tick.
   @@index([conversationId, createdAt])
+}
+
+// Something that happened to a rider's posts — a wave or a comment — waiting to
+// be told to them (ADR 0007).
+//
+// DMs are deliberately NOT here. Unread mail is Participant.unreadCount, a
+// counter, because forty messages from one rider is one conversation waiting on
+// you; a wave and a comment are genuinely two things and get a row each. The
+// badge adds the two counts. That asymmetry is the whole reason there are two
+// mechanisms instead of one.
+//
+// Both ends are accounts, enforced here rather than remembered at the call
+// sites: a signed-out visitor can still wave while ANONYMOUS_WAVES_ENABLED is
+// on, and that wave writes its Wave row and notifies nobody. "Someone waved"
+// names nobody and links nowhere — an unactionable row — and a required actorId
+// also means a signed-out visitor has no notification path to toggle a wave on
+// and off through.
+//
+// Nothing about the actor is copied onto the row, so a handle change is
+// reflected on read. Same preference as Message and Room, against the older
+// Post.author denormalization.
+model Notification {
+  id          String @id @default(cuid())
+  recipientId String
+  actorId     String
+  // "wave" | "comment" — see NOTIFICATION_TYPES in src/lib/notifications.ts.
+  // A bare String with a type guard beside it, per house convention; no enums.
+  type        String
+
+  // Which thing it happened to. Nullable because not every type carries both —
+  // a wave has no comment — and because a type added later may carry neither.
+  // Real foreign keys rather than loose ids: nothing deletes a post today, and
+  // the day something does, a notification pointing at one that no longer
+  // exists renders as a row saying somebody waved at nothing.
+  postId    String?
+  commentId String?
+
+  createdAt DateTime  @default(now())
+  // Set once when the rider reads it and never unset, which is what makes a
+  // repeat "mark read" harmless — the same reason the DM read route writes a
+  // fixed 0 rather than decrementing.
+  readAt    DateTime?
+
+  recipient User     @relation("NotificationRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+  actor     User     @relation("NotificationActor", fields: [actorId], references: [id], onDelete: Cascade)
+  post      Post?    @relation(fields: [postId], references: [id], onDelete: Cascade)
+  comment   Comment? @relation(fields: [commentId], references: [id], onDelete: Cascade)
+
+  // The panel: my notifications, newest first, and the ?before= cursor pages
+  // down the same index.
+  @@index([recipientId, createdAt])
+  // The badge count, which runs on a timer in every open tab and is the query
+  // whose cost multiplies. Also the wave dedupe guard's lookup, which filters
+  // this down by actor and post.
+  @@index([recipientId, readAt])
 }
