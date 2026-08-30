@@ -151,12 +151,30 @@ guard query on a repeat tap, and it closes the smaller wart that the route
 currently can't tell whether it created a wave or found one — but the guard is
 what delivers the property.
 
-**Guest waves collapse.** A signed-out waver is `actorId: null` and nothing
-else; the `guestId` from the cookie isn't on the notification, so the guard
-matches every guest against every other one and a post gets at most one
-"Someone waved", ever. The alternative is not deduping guests at all, which
-hands the toggle to anyone signed out. Accepted as the better end of that
-trade, and stated here rather than discovered.
+### Both ends of a notification are accounts
+
+0001 has guest waves notifying with `actorId: null`, rendering as "Someone
+waved". They don't. **A notification is only ever written when a signed-in rider
+acts on a signed-in rider**, and that is a schema invariant here rather than a
+convention the emit sites have to remember: `actorId` is required, `recipientId`
+already was, and both are real foreign keys to `User`.
+
+Anonymous waves themselves are untouched — `NEXT_PUBLIC_ALLOW_ANONYMOUS_WAVES`
+still works, the guest's `Wave` row is still written, the tally still moves. It
+just doesn't notify.
+
+What that buys, beyond the smaller surface:
+
+- **The griefing vector closes rather than being managed.** A signed-out visitor
+  can toggle a wave as often as they like and there is no notification path to
+  ride; the dedupe guard is then only ever protecting against a rider who is
+  named and accountable.
+- **"Someone waved" was a bad row anyway.** It names nobody, links nowhere, and
+  is unactionable — the only thing a rider can do with it is wonder. A panel row
+  the reader can't follow is a row that shouldn't be written.
+- **No collapse question.** With `actorId` nullable, the guard has nothing to
+  tell two guests apart by, so every guest would have deduped into one another —
+  a rule that has to be explained. Required `actorId` deletes the question.
 
 ### `postId` and `commentId` get real foreign keys
 
@@ -206,8 +224,9 @@ allowed values in a comment plus a type guard in `src/lib/`, no enums, every
 model Notification {
   id          String   @id @default(cuid())
   recipientId String
-  // Null when a guest waved — there's no account to name or link to.
-  actorId     String?
+  // Required, both ends. A notification is a signed-in rider acting on a
+  // signed-in rider; a guest wave writes its Wave row and notifies nobody.
+  actorId     String
   // "wave" | "comment" — see NOTIFICATION_TYPES in src/lib/notifications.ts
   type        String
   postId      String?
@@ -216,7 +235,7 @@ model Notification {
   readAt      DateTime?
 
   recipient User     @relation("NotificationRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
-  actor     User?    @relation("NotificationActor", fields: [actorId], references: [id], onDelete: SetNull)
+  actor     User     @relation("NotificationActor", fields: [actorId], references: [id], onDelete: Cascade)
   post      Post?    @relation(fields: [postId], references: [id], onDelete: Cascade)
   comment   Comment? @relation(fields: [commentId], references: [id], onDelete: Cascade)
 
@@ -244,7 +263,7 @@ branch is cut from the fit work rather than from `main`.
 | File | Tier | Holds |
 | --- | --- | --- |
 | `src/lib/notifications.ts` | pure | `NOTIFICATION_TYPES` (`as const`), `isNotificationType`, `NotificationDTO`, `notificationLine(n)` → the sentence the panel renders |
-| `src/lib/notify.ts` | server | `emitWave`, `emitComment`, taking a transaction client. Header comment says why it isn't inline in the routes: both call sites need the same suppression rules — no self-notify, no notify on an authorless post, no duplicate on a repeat wave — and duplicating them is how they drift |
+| `src/lib/notify.ts` | server | `emitWave`, `emitComment`, taking a transaction client and a **required** `actorId` — the guest case is refused by the signature rather than by a branch inside. Header comment says why this isn't inline in the routes: both call sites need the same suppression rules — no self-notify, no notify on an authorless post, no duplicate on a repeat wave — and duplicating them is how they drift |
 
 No `stream.ts`. No `conversations.ts` equivalent: the panel's Prisma shapes are
 small enough to live beside the two routes that use them, and a third file that
@@ -269,8 +288,8 @@ exports one `select` is a file to keep in sync for nothing.
   transaction. Line 24's identical select is the GET's and is left alone.
 - **`src/app/api/posts/[id]/waves/route.ts`** — the same widening in `resolve()`
   at line 40, the `createMany` swap at lines 63 and 69, and the repeat-wave
-  guard above. Guest waves emit with `actorId: null` and render as "Someone
-  waved"; a guest wave on an authorless post emits nothing at all.
+  guard above. The guest branch writes its `Wave` row and returns without
+  emitting — there is no signed-in actor, so there is nothing to write.
 
 ---
 
@@ -344,9 +363,11 @@ dev` output is exact, but nobody should ship DDL unread.
    nothing.
 5. Wave a seeded post with `userId: null` → no notification, no crash, and the
    wave itself still lands.
-6. With `NEXT_PUBLIC_ALLOW_ANONYMOUS_WAVES=true`, wave signed out → the row
-   carries `actorId: null` and renders as "Someone waved" with no broken profile
-   link.
+6. With `NEXT_PUBLIC_ALLOW_ANONYMOUS_WAVES=true`, wave signed out → the `Wave`
+   row lands and the tally moves, and `Notification` is untouched. Toggle it ten
+   times: still zero notifications, because there is no path rather than a
+   guard holding one shut. The control is the same ten toggles signed in, which
+   write exactly one.
 7. `GET /api/unread` signed out is 401. Signed in it returns both halves, and
    the sum is what the wheel renders. The old `/api/messages/unread` path is
    gone, not left as a duplicate.
