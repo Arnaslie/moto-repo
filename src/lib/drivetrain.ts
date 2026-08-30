@@ -213,17 +213,20 @@ export type Gear = {
 
 /**
  * First is where you pull away, so it's the feed. Sixth is the cruising gear,
- * so it's you. Gears 3 and 4 are named but not built: they render as empty
- * sprockets, which puts the roadmap in the nav where we'll trip over it.
+ * so it's you. Fourth is named but not built: it renders as an empty sprocket,
+ * which puts the roadmap in the nav where we'll trip over it.
  *
  * Fifth is Comms — the intercom. It sits high in the box on purpose: it's what
  * you're in when you've stopped moving and settled into a conversation.
+ *
+ * Third is Fit (ADR 0006) — the seat-height check. It took the slot Garage was
+ * holding; Garage has no gear now and wants one of the remaining blanks.
  */
 export function gearsFor(handle: string | null): Gear[] {
   return [
     { n: 1, label: "Feed", href: "/" },
     { n: 2, label: "Riders", href: "/riders" },
-    { n: 3, label: "Garage", href: null },
+    { n: 3, label: "Fit", href: "/fit" },
     { n: 4, label: "Routes", href: null },
     { n: 5, label: "Comms", href: "/comms" },
     { n: 6, label: "Profile", href: handle ? `/profile/${handle}` : null, auth: true },
