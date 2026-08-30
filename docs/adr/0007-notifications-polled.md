@@ -143,6 +143,21 @@ Deliberately not a `@@unique`, because the same constraint must not apply to
 comments: two comments on your post are two notifications, and collapsing them
 is a different feature (grouping) that this record doesn't build.
 
+The distinction the guard turns on is worth naming, because `count === 1` looks
+like it should be enough and isn't: **the wave row is state, the notification is
+an event.** Deleting the state doesn't delete the event, so the state can't be
+the dedupe key across a delete. `count === 1` is kept anyway — it saves the
+guard query on a repeat tap, and it closes the smaller wart that the route
+currently can't tell whether it created a wave or found one — but the guard is
+what delivers the property.
+
+**Guest waves collapse.** A signed-out waver is `actorId: null` and nothing
+else; the `guestId` from the cookie isn't on the notification, so the guard
+matches every guest against every other one and a post gets at most one
+"Someone waved", ever. The alternative is not deduping guests at all, which
+hands the toggle to anyone signed out. Accepted as the better end of that
+trade, and stated here rather than discovered.
+
 ### `postId` and `commentId` get real foreign keys
 
 0001's model carries them as bare `String?` with no relation. Nothing deletes a
