@@ -12,9 +12,10 @@ editing history — the wrong turns are half of what makes the file worth keepin
 
 | # | Decision | Status |
 | --- | --- | --- |
-| [0001](./0001-app-wide-notifications.md) | App-wide notifications, on top of direct messages | Partly implemented by 0003 — DMs built, notifications not |
+| [0001](./0001-app-wide-notifications.md) | App-wide notifications, on top of direct messages | Split in two — DMs built by 0003, notifications planned in 0007; neither streamed |
 | [0002](./0002-video-and-360-uploads.md) | Video and 360 footage on posts | Accepted, not yet implemented |
 | [0003](./0003-direct-messages-polled.md) | Direct messages, polled | Implemented |
 | [0004](./0004-wheel-icon-measured.md) | The wheel, measured off the reference | Implemented — revises 0001's icon section |
 | [0005](./0005-chrome-in-a-layout.md) | The chrome moves into a layout | Implemented — revises 0001's reasoning about where the header lives |
 | [0006](./0006-seat-height-fit.md) | Seat height fit, measured off the rider | Partly implemented — fit check built, rider reports not |
+| [0007](./0007-notifications-polled.md) | Notifications, polled | Accepted, not yet implemented |

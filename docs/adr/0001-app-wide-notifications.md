@@ -1,11 +1,14 @@
 # ADR 0001 — App-wide notifications, on top of direct messages
 
-- **Status:** Accepted. The DM half is implemented — see
-  [0003](./0003-direct-messages-polled.md), which ships it polled rather than
-  streamed and without `Block`. The notification layer (steps 4–6) is not built,
-  and this record remains the design for it.
+- **Status:** Accepted, and now built in two halves, neither of them streamed.
+  The DM half is [0003](./0003-direct-messages-polled.md), polled and without
+  `Block`; the notification half is [0007](./0007-notifications-polled.md),
+  polled on the badge tick this record's own DM work established. What survives
+  here is the data model and the tell-tale; what doesn't is the stream and the
+  reason the tell-tale opened one.
 - **Date:** 2026-08-24
-- **Supersedes / superseded by:** —
+- **Supersedes / superseded by:** delivery superseded by
+  [0007](./0007-notifications-polled.md)
 - **Touches:** `prisma/schema.prisma`, `src/lib/`, `src/app/api/`, `src/components/SiteHeader.tsx`
 
 ---
@@ -253,6 +256,12 @@ insert can't corrupt a successful wave.
 ---
 
 ## The stream
+
+> **Not built — see [0007](./0007-notifications-polled.md).** The design below
+> is sound and is turned down on cost, not correctness: it holds a function
+> invocation open per connected rider to shave 18 seconds off a wave nobody
+> needs told about in two. The section stays because the argument for it is the
+> argument to reread if activity ever has to feel live.
 
 `src/app/api/stream/route.ts`, `export const maxDuration = 60`.
 
