@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/session";
 import { commentSelect, serializeComment } from "@/lib/posts";
 import { MAX_COMMENT_LENGTH } from "@/lib/comments";
+import { emitComment } from "@/lib/notify";
 
 // GET /api/posts/[id]/comments — the full thread, oldest first. The feed only
 // ships the newest handful with each post, so this backs "load all".
@@ -63,19 +64,41 @@ export async function POST(
   }
 
   const { id } = await params;
-  const post = await prisma.post.findUnique({ where: { id }, select: { id: true } });
+  // `userId` is selected here and not in the GET above: it's the post's author,
+  // which is who the notification goes to. Null on a seeded or anonymous post —
+  // a post with nobody to tell.
+  const post = await prisma.post.findUnique({
+    where: { id },
+    select: { id: true, userId: true },
+  });
   if (!post) {
     return NextResponse.json({ error: "Post not found." }, { status: 404 });
   }
 
-  const comment = await prisma.comment.create({
-    data: {
+  // The comment and the notification land together or not at all. A comment
+  // that tells nobody is a comment the author finds by scrolling back, which is
+  // the thing this whole layer exists to stop.
+  const comment = await prisma.$transaction(async (tx) => {
+    const created = await tx.comment.create({
+      data: {
+        postId: id,
+        userId: user.id,
+        author: user.handle,
+        content: trimmed,
+      },
+      select: commentSelect,
+    });
+
+    // No dedupe, unlike a wave: someone who comments three times has said
+    // three things. Suppressed only for your own post, or one with no author.
+    await emitComment(tx, {
       postId: id,
-      userId: user.id,
-      author: user.handle,
-      content: trimmed,
-    },
-    select: commentSelect,
+      postAuthorId: post.userId,
+      actorId: user.id,
+      commentId: created.id,
+    });
+
+    return created;
   });
 
   return NextResponse.json({ comment: serializeComment(comment) }, { status: 201 });
