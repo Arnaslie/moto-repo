@@ -1,18 +1,17 @@
 "use client";
 
-import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { WheelIcon } from "@/components/icons";
+import { NotificationPanel } from "@/components/NotificationPanel";
 import { waitingSentence, waitingTotal, type Waiting } from "@/lib/notifications";
 
 /**
  * The wheel in the header cluster: lit when something's waiting, with a count
  * beside it. See ADR 0007.
  *
- * Was MessagesLink, which counted unread DMs. It now counts everything waiting
- * — mail plus waves and comments — which is the widening its own comment
- * anticipated. Still a link to /messages; the panel that gives activity rows
- * somewhere of their own is step 6.
+ * Was MessagesLink, which counted unread DMs and linked to /messages. It counts
+ * everything waiting now, and opens a panel instead of navigating — activity
+ * rows have nowhere else to go, since there is no /notifications page.
  *
  * It owns its counts after first paint but does not open at zero: the layout
  * renders the opening pair into the HTML, which is what stops the wheel
@@ -38,6 +37,24 @@ const POLL_MS = 20000;
  */
 let lastSeen: { handle: string; waiting: Waiting } | null = null;
 
+/** The fetch alone, with no setState in it, so both callers below can share it
+ *  without tripping react-hooks/set-state-in-effect. */
+async function fetchWaiting(handle: string): Promise<Waiting | null> {
+  try {
+    const res = await fetch("/api/unread");
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (typeof data.unread !== "number" || typeof data.activity !== "number") return null;
+    const next = { conversations: data.unread, activity: data.activity };
+    // Written whether or not the caller is still mounted: navigating away
+    // mid-flight is exactly when the answer is worth keeping.
+    lastSeen = { handle, waiting: next };
+    return next;
+  } catch {
+    return null; // transient — the next tick retries
+  }
+}
+
 export function RiderTelltale({
   handle,
   initial,
@@ -52,52 +69,60 @@ export function RiderTelltale({
   const [waiting, setWaiting] = useState<Waiting>(() =>
     lastSeen?.handle === handle ? lastSeen.waiting : initial,
   );
+  const [open, setOpen] = useState(false);
 
   useEffect(() => {
     let active = true;
-
-    async function load() {
-      try {
-        const res = await fetch("/api/unread");
-        if (!res.ok) return;
-        const data = await res.json();
-        if (typeof data.unread !== "number" || typeof data.activity !== "number") return;
-        const next = { conversations: data.unread, activity: data.activity };
-        // Written whether or not this component is still mounted: navigating
-        // away mid-flight is exactly when the answer is worth keeping.
-        lastSeen = { handle, waiting: next };
-        if (active) setWaiting(next);
-      } catch {
-        /* transient — the next tick retries */
-      }
+    async function tick() {
+      const next = await fetchWaiting(handle);
+      if (next && active) setWaiting(next);
     }
-
-    load();
-    const id = setInterval(load, POLL_MS);
+    tick();
+    const id = setInterval(tick, POLL_MS);
     return () => {
       active = false;
       clearInterval(id);
     };
   }, [handle]);
 
+  // Lets the panel drop the count the moment it marks something read, instead
+  // of the wheel staying lit until the next 20s tick.
+  const refresh = useCallback(async () => {
+    const next = await fetchWaiting(handle);
+    if (next) setWaiting(next);
+  }, [handle]);
+
   const total = waitingTotal(waiting);
 
   return (
-    <Link
-      href="/messages"
-      aria-label="Messages"
-      // The wheel keeps the header's text ramp in both states. Turning the whole
-      // icon orange would paint over the stripe with the colour the stripe is,
-      // and the stripe is the signal.
-      className="flex items-center gap-1.5 font-medium text-black/70 transition-colors hover:text-orange-500 dark:text-white/70"
-    >
-      <WheelIcon lit={total > 0} size={24} />
-      {total > 0 && (
-        <span className="text-sm font-semibold tabular-nums text-orange-500">{total}</span>
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-label="Notifications"
+        aria-expanded={open}
+        aria-haspopup="dialog"
+        // The wheel keeps the header's text ramp in both states. Turning the
+        // whole icon orange would paint over the stripe with the colour the
+        // stripe is, and the stripe is the signal.
+        className="flex items-center gap-1.5 font-medium text-black/70 transition-colors hover:text-orange-500 dark:text-white/70"
+      >
+        <WheelIcon lit={total > 0} size={24} />
+        {total > 0 && (
+          <span className="text-sm font-semibold tabular-nums text-orange-500">{total}</span>
+        )}
+        <span role="status" aria-live="polite" className="sr-only">
+          {waitingSentence(waiting)}
+        </span>
+      </button>
+
+      {open && (
+        <NotificationPanel
+          handle={handle}
+          onClose={() => setOpen(false)}
+          onRead={refresh}
+        />
       )}
-      <span role="status" aria-live="polite" className="sr-only">
-        {waitingSentence(waiting)}
-      </span>
-    </Link>
+    </div>
   );
 }
