@@ -18,17 +18,29 @@ export default async function AppLayout({
     ? { handle: user.handle, displayName: user.displayName }
     : null;
 
-  // Must match what /api/messages/unread counts — conversations waiting, not
-  // messages — or the wheel changes value on its first poll.
-  const initialUnread = user
-    ? await prisma.participant.count({
-        where: { userId: user.id, unreadCount: { gt: 0 } },
-      })
-    : 0;
+  // The wheel's opening counts, rendered into the HTML so a hard load doesn't
+  // arrive with it dark and light it a moment later. ADR 0001 turned this down
+  // as a prop through seven call sites and seven queries; there is one of each
+  // now, which is what having a layout bought.
+  //
+  // Same two halves /api/unread returns — conversations waiting, and unread
+  // activity rows — batched into one round trip. Both are counts against an
+  // indexed column rather than the route's findMany, because the layout only
+  // needs the numbers, not the per-conversation breakdown.
+  const [conversations, activity] = user
+    ? await prisma.$transaction([
+        prisma.participant.count({
+          where: { userId: user.id, unreadCount: { gt: 0 } },
+        }),
+        prisma.notification.count({
+          where: { recipientId: user.id, readAt: null },
+        }),
+      ])
+    : [0, 0];
 
   return (
     <main className="mx-auto min-h-screen w-full max-w-xl border-x border-black/10 dark:border-white/10">
-      <SiteHeader user={headerUser} initialUnread={initialUnread} />
+      <SiteHeader user={headerUser} initialWaiting={{ conversations, activity }} />
       {children}
     </main>
   );

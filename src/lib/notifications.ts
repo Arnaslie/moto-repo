@@ -31,6 +31,34 @@ export function excerpt(text: string): string {
 }
 
 /**
+ * What the wheel is counting: unread DM conversations, and unread activity
+ * rows. Two numbers rather than one sum, because they're counted by different
+ * rules — conversations vs rows — and the announcement has to say which is
+ * which. The badge renders `conversations + activity`.
+ */
+export type Waiting = { conversations: number; activity: number };
+
+export function waitingTotal(w: Waiting): number {
+  return w.conversations + w.activity;
+}
+
+/**
+ * The screen-reader line for the wheel. Composed rather than templated: "3
+ * waiting" doesn't say what is waiting, and a rider with one of each should
+ * hear both.
+ */
+export function waitingSentence(w: Waiting): string {
+  const parts: string[] = [];
+  if (w.conversations > 0) {
+    parts.push(`${w.conversations} conversation${w.conversations === 1 ? "" : "s"}`);
+  }
+  if (w.activity > 0) {
+    parts.push(`${w.activity} notification${w.activity === 1 ? "" : "s"}`);
+  }
+  return parts.length ? `${parts.join(" and ")} waiting` : "";
+}
+
+/**
  * A notification as the panel sees it.
  *
  * No avatar, unlike a `Correspondent`: adding one costs the equipped-gear join

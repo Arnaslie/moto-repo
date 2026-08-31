@@ -3,19 +3,20 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Drivetrain } from "./Drivetrain";
-import { MessagesLink } from "./messages/MessagesLink";
+import { RiderTelltale } from "./RiderTelltale";
 import { PodFilter } from "./PodFilter";
+import type { Waiting } from "@/lib/notifications";
 
 export type HeaderUser = { handle: string; displayName: string | null } | null;
 
 export function SiteHeader({
   user,
   // Rendered by the layout so the wheel is right in the HTML rather than a
-  // moment after it. Zero for a signed-out viewer, who has no wheel anyway.
-  initialUnread = 0,
+  // moment after it. Zeroes for a signed-out viewer, who has no wheel anyway.
+  initialWaiting = { conversations: 0, activity: 0 },
 }: {
   user: HeaderUser;
-  initialUnread?: number;
+  initialWaiting?: Waiting;
 }) {
   const router = useRouter();
 
@@ -47,7 +48,7 @@ export function SiteHeader({
         <div className="flex shrink-0 items-center gap-2 text-sm">
           {user ? (
             <>
-              <MessagesLink handle={user.handle} initialUnread={initialUnread} />
+              <RiderTelltale handle={user.handle} initial={initialWaiting} />
               <Link
                 href={`/profile/${user.handle}`}
                 className="font-medium text-black/70 hover:text-orange-500 dark:text-white/70"
