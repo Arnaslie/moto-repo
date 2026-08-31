@@ -23,9 +23,22 @@ export default async function ProfilePage({
   const viewer = await getCurrentUser();
   const waveViewer = await getWaveViewer(viewer);
 
+  // A `select`, not an `include`. This is the one query in the app that loads a
+  // rider by a handle out of the URL rather than by the session's own id, so an
+  // `include` here pulled any rider's email, private inseam and bcrypt hash out
+  // of the database for any visitor, signed in or not, on a public page that
+  // already renders five client components. Nothing passed the row anywhere —
+  // every field is read individually below — but that is a habit, not a
+  // guarantee, and `<Something user={user} />` is the natural thing to write.
   const user = await prisma.user.findUnique({
     where: { handle: handle.toLowerCase() },
-    include: {
+    select: {
+      id: true,
+      handle: true,
+      displayName: true,
+      bio: true,
+      avatarSkin: true,
+      createdAt: true,
       gear: { include: { gearItem: true } },
       posts: {
         orderBy: { createdAt: "desc" },

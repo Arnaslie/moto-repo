@@ -1,17 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/session";
-import { serializeComment } from "@/lib/posts";
+import { commentSelect, serializeComment } from "@/lib/posts";
 import { MAX_COMMENT_LENGTH } from "@/lib/comments";
-
-// The author + equipped gear each comment needs to render an Avatar.
-const commentInclude = {
-  user: {
-    include: {
-      gear: { where: { equipped: true }, include: { gearItem: true } },
-    },
-  },
-} as const;
 
 // GET /api/posts/[id]/comments — the full thread, oldest first. The feed only
 // ships the newest handful with each post, so this backs "load all".
@@ -29,7 +20,7 @@ export async function GET(
   const comments = await prisma.comment.findMany({
     where: { postId: id },
     orderBy: { createdAt: "asc" },
-    include: commentInclude,
+    select: commentSelect,
   });
 
   return NextResponse.json({ comments: comments.map(serializeComment) });
@@ -84,7 +75,7 @@ export async function POST(
       author: user.handle,
       content: trimmed,
     },
-    include: commentInclude,
+    select: commentSelect,
   });
 
   return NextResponse.json({ comment: serializeComment(comment) }, { status: 201 });

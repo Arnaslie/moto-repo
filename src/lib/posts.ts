@@ -3,12 +3,35 @@ import type { SlotKey } from "./gear";
 import { TICKER_COMMENT_LIMIT } from "./comments";
 import type { WaveViewer } from "./waves";
 
-// The author data the Avatar component needs. Shared by posts and comments.
-const authorInclude = {
+// The author fields an Avatar needs, and nothing else. Shared by posts and
+// comments.
+//
+// A `select` rather than an `include`, deliberately. `include` on a relation
+// loads every scalar column the model has, which here means every post in the
+// public feed — readable signed out — carrying its author's email, their
+// private inseam measurement and their bcrypt password hash into the route
+// handler. None of it was ever emitted: authorAvatar() and the serializers
+// below build fresh objects field by field. But that made the guarantee a
+// convention applied at four call sites rather than a property of the query,
+// and one future `<Something user={user} />` is all it would take. Fetch what
+// gets used.
+const authorSelect = {
+  avatarSkin: true,
   gear: {
     where: { equipped: true },
-    include: { gearItem: true },
+    select: { gearItem: { select: { slot: true, asset: true, color: true } } },
   },
+} as const;
+
+// A comment as the ticker and the thread render it. Exported because the
+// comments route needs the identical shape, and two hand-kept copies of a
+// select is how one of them quietly grows an `include` again.
+export const commentSelect = {
+  id: true,
+  author: true,
+  content: true,
+  createdAt: true,
+  user: { select: authorSelect },
 } as const;
 
 // Matches the one wave this viewer could have left. An account wins over a
@@ -26,13 +49,14 @@ function viewerWaveFilter(viewer?: WaveViewer | null) {
 // them (or nothing, for readers with neither an account nor a guest id).
 export function postInclude(viewer?: WaveViewer | null) {
   return {
-    user: { include: authorInclude },
-    // Comments ride along so the ticker renders with no round-trip; the thread
-    // fetches the rest on demand when it's expanded.
+    user: { select: authorSelect },
+    // Comments ride along with the post so the ticker can render immediately,
+    // with no round-trip. Bounded to the newest few; the thread fetches the
+    // rest on demand when it's expanded.
     comments: {
       take: TICKER_COMMENT_LIMIT,
       orderBy: { createdAt: "desc" },
-      include: { user: { include: authorInclude } },
+      select: commentSelect,
     },
     // At most one row, given the unique pairs on Wave. A reader with no
     // identity gets a filter that can never match, which keeps this one query
