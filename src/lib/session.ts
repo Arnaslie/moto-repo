@@ -53,7 +53,10 @@ export const getCurrentUser = cache(async function getCurrentUser() {
     where: { id: session.userId },
     select: {
       id: true,
-      email: true,
+      // No email. Nothing reads it — every call site takes id, handle or
+      // displayName — and this is the object that is in scope on every page in
+      // the app and the one most likely to be handed to a client component by
+      // mistake. What isn't loaded can't be leaked.
       handle: true,
       displayName: true,
       bio: true,
