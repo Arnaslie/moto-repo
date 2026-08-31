@@ -18,8 +18,8 @@ export default async function ProfilePage({
 }) {
   const { handle } = await params;
 
-  // Ahead of the profile query: the posts below are loaded with the same
-  // viewer-aware include the feed uses, so waves show up already flipped.
+  // The posts below use the same viewer-aware include the feed does, so waves
+  // arrive already flipped rather than being patched in on the client.
   const viewer = await getCurrentUser();
   const waveViewer = await getWaveViewer(viewer);
 

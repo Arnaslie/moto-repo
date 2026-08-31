@@ -52,7 +52,6 @@ export function RiderMap({
   const leafletRef = useRef<typeof LeafletNS | null>(null);
   const [ready, setReady] = useState(false);
 
-  // Initialize the map once, in the browser only.
   useEffect(() => {
     let cancelled = false;
 
@@ -83,7 +82,6 @@ export function RiderMap({
     };
   }, []);
 
-  // Sync markers whenever the data changes.
   useEffect(() => {
     const L = leafletRef.current;
     const map = mapRef.current;

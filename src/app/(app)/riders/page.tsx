@@ -5,9 +5,8 @@ export const metadata = {
   description: "See which riders are out and sharing their location right now.",
 };
 
-// The map is signed-out-readable and RidersView fetches its own riders, so the
-// page itself has nothing to load. The header above it is what needs the
-// session now, and the layout asks for it.
+// RidersView fetches its own riders, so this page loads nothing itself; the
+// dynamic marker is here for the session the layout's header reads.
 export const dynamic = "force-dynamic";
 
 export default function RidersPage() {

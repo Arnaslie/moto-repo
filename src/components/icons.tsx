@@ -1,5 +1,4 @@
-// Shared line-art icons. Plain presentational SVG — no state, no client
-// directive, so both server and client components can pull them in.
+// No client directive in here, so server and client components can both import.
 
 // The moto wave: the back of a rider's left hand dropped off the clutch, index
 // and middle finger pointing down. Wrist at the top, thumb tucked on the left,
@@ -7,9 +6,7 @@
 // itself rather than in the detail strokes, so the shape still reads as a hand
 // once it's filled in.
 //
-// The geometry is one closed path in a 24x24 box: stroked when the viewer
-// hasn't waved, filled when they have. Below ~24px the silhouette gets busy, so
-// callers should render it at 26-28px and keep the count beside it.
+// Below ~24px the silhouette gets busy; render it at 26-28px.
 const WAVE_HAND =
   "M9.2 2.6 L13.4 2.6 C15 2.8 16.2 3.8 16.6 5.2 C17.8 5.6 18.4 6.4 18.3 7.6 " +
   "C18.25 8.2 18 8.45 17.9 8.8 C18.4 9.4 18.45 10.6 17.8 11.4 " +
@@ -70,28 +67,9 @@ export function ChatIcon({ size = 14 }: { size?: number }) {
   );
 }
 
-/* ---------------------------------------------------------------------------
-   The wheel.
-
-   ADR 0001 wanted a motorcycle wheel rather than a bell for the header, and
-   named the reference: the Ninja H2R press photo in docs/adr/assets. This is
-   that wheel, measured off the photo rather than eyeballed from it.
-
-   How the numbers were got: fit a circle to the tyre's outer silhouette, then
-   read everything as a fraction of it. The rim's inner edge — where the blades
-   land — is a hard brightness step at 0.595, the green pinstripe peaks at 0.70,
-   and the rim lip is 0.72. Dividing through by that last one puts the whole
-   icon in units of the rim, which is what actually gets drawn; the tyre doesn't.
-   Blade widths came from walking outward from each spoke's axis until white sky
-   showed through the window on both sides, at every radius the photo left
-   unoccluded.
-
-   Those widths fall on a straight line — half-width 0.193 - 0.254r in rim units
-   — which is the useful finding here. It means the blades are flat-sided, so
-   the spider is a true five-pointed star, and extrapolating the line to where
-   adjacent blades touch puts the star's valleys at 0.318. Against the photo the
-   model holds to 0.5 degrees.
---------------------------------------------------------------------------- */
+/* The wheel, measured off the Ninja H2R press photo in docs/adr/assets rather
+   than eyeballed from it. See ADR 0004 for the fractions and how they were got;
+   the measurement rig is not in the repo. */
 
 // A 24-box, so these are the ADR's fractions times a rim radius of 10.6.
 const RIM_MID = 9.68; // rim drawn as one stroke at its own section, 8.76 -> 10.6
@@ -103,36 +81,22 @@ const HUB_R = 2.8;
  * One blade, pointing straight up, hub to rim: a flat-sided taper from 24
  * degrees of arc at the root to 4 at the tip.
  *
- * There is one departure from the casting in here, and it's the root. On the
- * real wheel the blades keep widening until they merge into a solid star at
- * 0.318 — the windows pinch shut just outside the bolt circle. Drawn that way
- * and filled, a five-pointed star with a 0.385 waist is *geometrically* a
- * sheriff's badge, and at 24px that is exactly what it reads as. So the taper
- * is the measured one from the rim in to 0.47, and inside that the blade runs
- * to the hub at constant width, leaving the windows open. It costs the
- * interlocking roots — detail the photo only shows because it's 340px wide —
- * and it buys the thing reading as a wheel, which is the whole job.
+ * The root is the one place this icon is knowingly *not* the object. On the real
+ * wheel the blades merge into a solid star at 0.318, and drawn that way and
+ * filled it is geometrically a sheriff's badge — so the measured taper stops at
+ * 0.47 and the blade runs to the hub at constant width, windows open. See ADR
+ * 0004.
  */
 const BLADE = "M10.85,9.45L10.43,7.25L11.39,3.26L12.61,3.26L13.56,7.25L13.15,9.45Z";
 
 /**
  * Rotated so a blade sits at twelve o'clock, three degrees off vertical — the
- * angle the reference wheel happens to be stopped at.
- *
- * ADR 0001 picked the other phase, a window at twelve, to keep the icon from
- * reading as a badge. Worth saying why this doesn't follow it: that rotation
- * puts a blade pointing straight down and two pointing up, which on a filled
- * star is an inverted pentagram — the badge problem, worse. Once the windows
- * are open neither phase reads as a badge, so the tie goes to the photo.
+ * angle the reference wheel happens to be stopped at. ADR 0001 picked the other
+ * phase, a window at twelve; ADR 0004 overrules it, so don't rotate it back.
  */
 const BLADE_PITCH = 72; // 360 / 5, and the only reason there are five of them
 
 /**
- * Quiet it's a line-art wheel in the surrounding text colour. With something
- * waiting, the rim stripe lights — the real wheel already carries a coloured
- * line there, so the accent comes off the object instead of being a dot bolted
- * to the corner, the same way the drivetrain turns the engaged gear orange.
- *
  * The stripe is drawn twice its scale width. At 0.042 of the rim it would be a
  * half-pixel line at header size, and an unread mark nobody can see isn't one.
  *

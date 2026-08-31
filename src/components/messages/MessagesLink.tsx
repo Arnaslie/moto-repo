@@ -5,38 +5,24 @@ import { useEffect, useState } from "react";
 import { WheelIcon } from "@/components/icons";
 
 /**
- * The inbox link in the header cluster: the wheel, lit when something's
- * waiting, with a count beside it.
- *
- * It owns its count after first paint — polling for it, per ADR 0001 and the
- * RidersView precedent — but it no longer opens at zero. The layout renders the
- * opening count into the HTML and hands it down. 0001 turned that down as a
- * prop through seven call sites; the layout made it one, and it's what stops
- * the wheel arriving dark on a hard load. When the notification layer lands,
- * the wheel keeps its place and widens its source from unread DMs to
- * everything waiting.
+ * The inbox link in the header cluster. See ADR 0001 for the polling and ADR
+ * 0004 for the wheel. The layout renders the opening count into the HTML and
+ * hands it down as `initialUnread`, which is what stops the wheel arriving dark
+ * on a hard load.
  *
  * Only ever rendered for a signed-in rider, so the fetch always has a session.
  */
 
 // Slower than the thread's tick by design: this runs in every open tab, so it's
-// the interval whose cost multiplies. A minute late to a badge is fine; the
-// thread you're actually watching updates in three seconds.
+// the interval whose cost multiplies.
 const POLL_MS = 20000;
 
 /**
- * The last count this tab saw, kept at module scope.
- *
- * This used to carry the count across every navigation in the app, because
- * every page mounted its own header and tore this component down with it. The
- * layout owns the header now, so an in-app navigation doesn't remount anything
- * and there's nothing left to carry there.
- *
- * It stays for the remounts that are left: login and signup sit outside the
- * app group, so signing in and landing on the feed does build a fresh one, and
- * that's a common enough trip to be worth not blinking through. A ref still
- * wouldn't do it — a ref is destroyed with the component that owns it. Module
- * scope outlives a remount and lives as long as the tab.
+ * The last count this tab saw, kept at module scope. It is there for the
+ * remounts the layout doesn't absorb: login and signup sit outside the app
+ * group, so signing in and landing on the feed builds a fresh one. A ref
+ * wouldn't do it — a ref is destroyed with the component that owns it, and
+ * module scope lives as long as the tab.
  *
  * Kept with the handle it belongs to, so logging out and back in as someone
  * else doesn't flash the last rider's count at the new one before the first
@@ -78,9 +64,6 @@ export function MessagesLink({
       }
     }
 
-    // Once now, then on the tick. The seeded count above is what the wheel
-    // shows in the meantime, so this is correcting a value rather than filling
-    // in a blank.
     load();
     const id = setInterval(load, POLL_MS);
     return () => {
@@ -100,8 +83,6 @@ export function MessagesLink({
       className="flex items-center gap-1.5 font-medium text-black/70 transition-colors hover:text-orange-500 dark:text-white/70"
     >
       <WheelIcon lit={unread > 0} size={24} />
-      {/* Beside the wheel, not on it: the stripe says something's waiting, the
-          number says how much. */}
       {unread > 0 && (
         <span className="text-sm font-semibold tabular-nums text-orange-500">{unread}</span>
       )}

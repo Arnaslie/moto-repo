@@ -6,9 +6,6 @@ import { SLOTS, type SlotKey } from "@/lib/gear";
 const HEX_RE = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
 const SLOT_KEYS = new Set<string>(SLOTS.map((s) => s.key));
 
-// POST /api/avatar — customize the signed-in user's avatar.
-// Accepts one of: { gearItemId } to equip, { clearSlot } to empty a slot,
-// or { skin } to set the base skin tone.
 export async function POST(request: Request) {
   const user = await getCurrentUser();
   if (!user) {
@@ -27,7 +24,6 @@ export async function POST(request: Request) {
     skin?: unknown;
   };
 
-  // Set skin tone.
   if (typeof skin === "string") {
     if (!HEX_RE.test(skin)) {
       return NextResponse.json({ error: "skin must be a hex color." }, { status: 400 });
@@ -36,7 +32,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true });
   }
 
-  // Clear a slot.
   if (typeof clearSlot === "string") {
     if (!SLOT_KEYS.has(clearSlot)) {
       return NextResponse.json({ error: "Unknown slot." }, { status: 400 });
@@ -48,7 +43,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true });
   }
 
-  // Equip an owned item.
   if (typeof gearItemId === "string") {
     const owned = await prisma.userGear.findUnique({
       where: { userId_gearItemId: { userId: user.id, gearItemId } },

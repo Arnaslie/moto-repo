@@ -38,13 +38,9 @@ export async function getSession() {
   return getIronSession<SessionData>(cookieStore, sessionOptions);
 }
 
-// The currently authenticated user, or null. Safe to call in server
-// components and route handlers.
-//
-// Wrapped in cache() so it's one query per request no matter how many callers
-// there are. The app layout asks for the header's rider and the page below it
-// usually asks again for its own reasons; without this that's two identical
-// lookups on every render.
+// The currently authenticated user, or null. Safe in server components and
+// route handlers. cache()d because the app layout asks for the header's rider
+// and the page below it asks again — otherwise two identical lookups a render.
 export const getCurrentUser = cache(async function getCurrentUser() {
   const session = await getSession();
   if (!session.userId) return null;
@@ -78,18 +74,16 @@ export const getCurrentUser = cache(async function getCurrentUser() {
   return user;
 });
 
-// The guest id a signed-out visitor waves under, if they already have one.
-// Read-only, so it's safe in a server component. Null means they've never
-// waved (or the toggle is off) — either way there's nothing to match against.
+// The guest id a signed-out visitor waves under. Read-only, so it's safe in a
+// server component. Null means they've never waved, or the toggle is off.
 export async function getGuestWaverId() {
   if (!ANONYMOUS_WAVES_ENABLED) return null;
   const cookieStore = await cookies();
   return cookieStore.get(GUEST_WAVE_COOKIE)?.value ?? null;
 }
 
-// Same, but mints one when it's missing. Writes a cookie, so this is only
-// callable from a route handler or server function — a guest's first wave is
-// what gives them their identity.
+// Same, but mints one when it's missing. Writes a cookie, so it is only
+// callable from a route handler or server function.
 export async function ensureGuestWaverId() {
   const cookieStore = await cookies();
   const existing = cookieStore.get(GUEST_WAVE_COOKIE)?.value;

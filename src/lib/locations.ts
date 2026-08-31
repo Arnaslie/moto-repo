@@ -36,8 +36,6 @@ function isFiniteNumber(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value);
 }
 
-// Validate an untrusted request body into a LocationInput. Shared by the API
-// route today and reusable for optimistic client-side checks later.
 export function parseLocationInput(body: unknown): ParseResult {
   if (typeof body !== "object" || body === null) {
     return { ok: false, error: "Request body must be an object." };
@@ -70,7 +68,6 @@ export function parseLocationInput(body: unknown): ParseResult {
   };
 }
 
-// True if a position is recent enough to show as an active rider.
 export function isActive(updatedAt: string, now: number = Date.now()): boolean {
   return now - new Date(updatedAt).getTime() <= ACTIVE_WINDOW_MS;
 }

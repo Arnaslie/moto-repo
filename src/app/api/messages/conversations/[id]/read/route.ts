@@ -2,15 +2,13 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireParticipant } from "@/lib/thread";
 
-// POST /api/messages/conversations/[id]/read — mark the thread read.
+// Only ever your own side of the thread: `participantId` comes from the guard,
+// which resolves it from the session, so no id in the request can point at
+// somebody else's read state.
 //
-// Only ever your own side of it: `participantId` comes from the guard, which
-// resolved it from the session, so there's no id in the request body that could
-// point at somebody else's read state.
-//
-// Fired when the thread mounts and again as messages arrive while it's open.
-// That makes repeat calls the normal case rather than an edge case, which is
-// why this is an idempotent write to a fixed value instead of a decrement.
+// The client fires this on mount and again on every message that arrives while
+// the thread is open, so repeat calls are the normal case — hence an idempotent
+// write to a fixed value rather than a decrement.
 export async function POST(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },

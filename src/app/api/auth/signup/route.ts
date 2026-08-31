@@ -33,7 +33,6 @@ export async function POST(request: Request) {
 
   const passwordHash = await bcrypt.hash(password, 10);
 
-  // Pick one default item per slot to equip out of the box.
   const defaultEquipped = new Set(
     SLOTS.map((slot) => STARTER_CATALOG.find((g) => g.slot === slot.key)?.id).filter(
       (id): id is string => Boolean(id),

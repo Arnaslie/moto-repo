@@ -3,19 +3,12 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/session";
 
-// The one guard every thread route runs, kept here rather than inline because
-// three separate route files need it and a duplicated access check is a check
-// that drifts. (comms/rooms/[id] keeps its equivalent inline — it can, because
-// both its handlers live in one file.)
+// The one guard every thread route runs, shared by three route files.
 //
-// The order matters and is the house order: signed out is a 401, a thread that
-// doesn't exist is a 404, and a thread that exists but isn't yours is a 403.
-//
-// One deliberate exception to that: a conversation you're not part of answers
-// **404, not 403**. Elsewhere in the app a 403 is safe — you already know the
-// room exists, you just don't host it. Here the id *is* the private thing: a
-// 403 would confirm that a given conversation exists, which is exactly what
-// someone probing ids wants to learn. Not yours reads as not there.
+// House order is 401 signed out, 404 missing, 403 not yours — but a
+// conversation you're not part of answers **404, not 403**, deliberately. Here
+// the id *is* the private thing, and a 403 would confirm to someone probing ids
+// that a given conversation exists.
 export async function requireParticipant(conversationId: string) {
   const user = await getCurrentUser();
   if (!user) {

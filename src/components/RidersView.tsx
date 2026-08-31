@@ -28,7 +28,6 @@ export function RidersView() {
     if (saved) setRider(saved);
   }, []);
 
-  // Poll for everyone's active positions.
   useEffect(() => {
     let active = true;
     async function load() {
@@ -48,7 +47,6 @@ export function RidersView() {
     };
   }, []);
 
-  // Stop watching if the component unmounts while sharing.
   useEffect(() => {
     return () => {
       if (watchIdRef.current != null) {

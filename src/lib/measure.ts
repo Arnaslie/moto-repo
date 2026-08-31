@@ -1,16 +1,11 @@
-// Deriving an inseam from photographs (ADR 0006) — plain geometry, no imports.
+// Deriving an inseam from photographs. See ADR 0006.
 //
-// The rider marks three points on each photo: top of head, crotch, and the
-// floor at their feet. Their known height scales pixels to millimetres, so the
-// camera distance doesn't matter and nothing has to be held up for reference.
+// The rider marks head, crotch and floor on each photo; their known height
+// scales pixels to millimetres, so camera distance doesn't matter.
 //
-// Why marked by hand rather than by a pose model: a pose estimator returns the
-// *hip joint* — roughly the greater trochanter, which sits well above the
-// crotch. Inseam is measured from the crotch down. Taking a hip landmark as an
-// inseam overestimates it systematically, on every rider, in the same
-// direction, which is the one error shape this feature cannot afford. Marking
-// the point directly sidesteps that, needs no model or download, and keeps the
-// photo in the browser where it belongs.
+// Marked by hand rather than by a pose model because an estimator returns the
+// *hip joint* — roughly the greater trochanter, well above the crotch — which
+// overestimates inseam systematically, on every rider, in the same direction.
 
 /** A point marked on a photo, in fractions of the image (0–1, y down). */
 export type Mark = { x: number; y: number };
@@ -30,11 +25,9 @@ export const SHOT_KINDS = [
 export type ShotKind = (typeof SHOT_KINDS)[number]["key"];
 
 /**
- * One photo's inseam estimate, in millimetres.
- *
- * Head-to-floor in pixels is the rider's known height, so every other vertical
- * distance in the same photo converts at the same rate. Returns null when the
- * marks are degenerate (head below floor, zero span) rather than dividing by
+ * One photo's inseam estimate, in millimetres. Head-to-floor in pixels is the
+ * rider's known height, so every other vertical distance in the same photo
+ * converts at the same rate. Null on degenerate marks rather than dividing by
  * something near zero and producing a confident absurdity.
  */
 export function inseamFromMarks(marks: PhotoMarks, heightMm: number): number | null {
@@ -55,14 +48,11 @@ export type Combined = {
 };
 
 /**
- * Fold the per-photo estimates into one measurement plus its uncertainty.
- *
- * The spread is the point of taking three. Averaging three shots of the same
- * pose would only cancel random jitter, and the dominant error here is
- * systematic — a camera held at eye level foreshortens the legs the same way
- * every time. The three shots are chosen to disagree when the capture went
- * wrong (the side view sees lean; the far front perturbs the perspective), so
- * a wide spread is a signal to retake, not noise to average away.
+ * The spread is the point of taking three, so don't average them away: the
+ * dominant error is systematic (a camera at eye level foreshortens the legs the
+ * same way every time), and the three shots are chosen to disagree when the
+ * capture went wrong — the side view sees lean, the far front perturbs the
+ * perspective. A wide spread is a signal to retake, not noise.
  */
 export function combine(estimates: Array<number | null>): Combined | null {
   const ok = estimates.filter((v): v is number => typeof v === "number");

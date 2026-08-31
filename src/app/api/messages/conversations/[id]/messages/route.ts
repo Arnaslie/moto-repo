@@ -4,7 +4,6 @@ import { parseMessageInput } from "@/lib/messages";
 import { messageSelect, serializeMessage } from "@/lib/conversations";
 import { requireParticipant } from "@/lib/thread";
 
-// POST /api/messages/conversations/[id]/messages — send a message.
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -27,10 +26,8 @@ export async function POST(
 
   const senderId = found.user.id;
 
-  // One transaction, because a message that lands without moving the thread to
-  // the top of the recipient's inbox — or without counting as unread — is worse
-  // than one that doesn't land at all: it's invisible, and nobody knows to look
-  // for it.
+  // One transaction: a message that lands without moving the thread up the
+  // recipient's inbox, or without counting as unread, is invisible.
   const [message] = await prisma.$transaction([
     prisma.message.create({
       data: { conversationId: id, senderId, body: parsed.value.body },
@@ -40,14 +37,13 @@ export async function POST(
       where: { id },
       data: { lastMessageAt: new Date() },
     }),
-    // Everyone who isn't the sender. `updateMany` rather than a targeted update
-    // so this keeps working unchanged if a thread ever holds more than two.
+    // `updateMany` rather than a targeted update, so this keeps working
+    // unchanged if a thread ever holds more than two participants.
     prisma.participant.updateMany({
       where: { conversationId: id, userId: { not: senderId } },
       data: { unreadCount: { increment: 1 } },
     }),
-    // Sending is reading: you were looking at the thread when you typed it, so
-    // your own side clears. Without this, a reply to something you never opened
+    // Sending is reading: without this, replying to something you never opened
     // leaves your inbox showing unread mail you've already answered.
     prisma.participant.update({
       where: { id: found.participantId },

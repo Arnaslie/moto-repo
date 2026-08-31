@@ -4,11 +4,6 @@ import { getCurrentUser } from "@/lib/session";
 import { pairKey, parseStartConversationInput } from "@/lib/messages";
 import { conversationSelect, inboxQuery, serializeConversation } from "@/lib/conversations";
 
-// GET /api/messages/conversations — the inbox.
-//
-// Private, unlike the Comms directory: that one is readable signed out because
-// a live room list is the best signup prompt the app has. There is no such
-// argument for someone else's mail.
 export async function GET() {
   const user = await getCurrentUser();
   if (!user) {
@@ -21,13 +16,6 @@ export async function GET() {
   });
 }
 
-// POST /api/messages/conversations — open a thread with a rider, by handle.
-//
-// Idempotent by design: you can't have two threads with the same person, so
-// pressing Message on a profile you've already written to walks you back into
-// the conversation you've got. 201 when it's new, 200 when it already existed —
-// the client doesn't care, but the distinction is free and it's what tells you
-// which happened when you're reading logs.
 export async function POST(request: Request) {
   const user = await getCurrentUser();
   if (!user) {
@@ -72,8 +60,8 @@ export async function POST(request: Request) {
   }
 
   try {
-    // Both participant rows are created with the conversation, in one
-    // statement — a thread with one side in it is a thread nobody can reply to.
+    // Both participant rows are nested into the one statement: a thread with
+    // only one side in it is a thread nobody can reply to.
     const conversation = await prisma.conversation.create({
       data: {
         pairKey: key,
@@ -87,12 +75,10 @@ export async function POST(request: Request) {
     );
   } catch (error) {
     // The lookup above can't be the guarantee: it's a separate round trip, so
-    // two requests that both read "no thread yet" both fall through to here.
-    // (Both directions race too — A pressing Message on B's profile at the same
-    // moment B presses it on A's produce the same pairKey, which is the point
-    // of sorting it.) The unique index is the real enforcement; this turns its
-    // violation back into the answer the lookup would have given. Same shape as
-    // the one-open-room-per-host handling in api/comms/rooms.
+    // two requests that both read "no thread yet" fall through to here. The
+    // unique index on pairKey is the real enforcement; this turns its violation
+    // back into the answer the lookup would have given. Same shape as the
+    // one-open-room-per-host handling in api/comms/rooms.
     if (!isUniqueViolation(error)) throw error;
 
     const raced = await prisma.conversation.findUnique({
@@ -104,9 +90,8 @@ export async function POST(request: Request) {
   }
 }
 
-// Prisma's unique-constraint code, checked structurally rather than by
-// importing PrismaClientKnownRequestError from the generated runtime — a deep
-// import that moves between versions. (Same helper as api/comms/rooms.)
+// Checked structurally rather than by importing PrismaClientKnownRequestError
+// from the generated runtime — a deep import that moves between versions.
 function isUniqueViolation(error: unknown): boolean {
   return (
     typeof error === "object" &&

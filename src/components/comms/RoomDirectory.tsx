@@ -7,15 +7,6 @@ import { TOPICS, TITLE_MAX, SEATS, topicLabel, type TopicId } from "@/lib/comms"
 import type { RoomSummary } from "@/lib/comms";
 import { timeAgo } from "@/lib/format";
 
-/* ---------------------------------------------------------------------------
-   The Comms directory.
-
-   This list is the product. Rooms are opened by riders rather than curated by
-   us, so nothing here is guaranteed to exist — what fills a room is its title,
-   and a rider deciding it's worth walking into. That's why the title is the
-   biggest thing on a card and everything else is a caption.
---------------------------------------------------------------------------- */
-
 const POLL_MS = 10000;
 
 export function RoomDirectory({
@@ -35,9 +26,8 @@ export function RoomDirectory({
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  // Keep the list fresh while it's on screen. Rooms come and go on the scale of
-  // minutes, so a slow poll is plenty — this isn't the audio path, and there's
-  // no socket to hold on serverless anyway.
+  // Rooms come and go on the scale of minutes, so a slow poll is plenty — this
+  // isn't the audio path, and there's no socket to hold on serverless anyway.
   useEffect(() => {
     let active = true;
     async function load() {
@@ -202,8 +192,6 @@ export function RoomDirectory({
   );
 }
 
-/* An empty directory is not a failure state — it's the normal state before
-   someone starts something, and it's the only screen that can ask them to. */
 function EmptyDirectory({ signedIn, onStart }: { signedIn: boolean; onStart: () => void }) {
   return (
     <div className="px-6 py-14 text-center">
@@ -233,10 +221,8 @@ function EmptyDirectory({ signedIn, onStart }: { signedIn: boolean; onStart: () 
 }
 
 function RoomCard({ room, signedIn }: { room: RoomSummary; signedIn: boolean }) {
-  // Signed out you can read the card but not open the door. The titles are the
-  // best advertisement the app has; the audio needs an account. Logging in
-  // carries the room along, so the door opens onto the room they picked rather
-  // than the feed.
+  // Signed out the card reads but the door needs an account, so `next` carries
+  // the room through the login and they land in it rather than on the feed.
   const href = signedIn
     ? `/comms/${room.id}`
     : `/login?next=${encodeURIComponent(`/comms/${room.id}`)}`;

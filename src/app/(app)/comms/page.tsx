@@ -14,8 +14,7 @@ export const dynamic = "force-dynamic";
 export default async function CommsPage() {
   const user = await getCurrentUser();
 
-  // Rendered on the server so the directory is in the HTML — the list is the
-  // whole point of the page, and a client-side fetch would show an empty shell
+  // Server-rendered on purpose: fetched from the client, the list flashes empty
   // first, which reads as "nobody's talking".
   const rooms = await prisma.room.findMany(liveRoomsQuery);
   const hostedRoom = user ? rooms.find((r) => r.host.handle === user.handle) : undefined;

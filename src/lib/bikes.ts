@@ -1,16 +1,12 @@
-// Bike spec catalog for the seat-height fit check (ADR 0006) — plain data, no
-// React/Next/Prisma imports, same as the gear catalog.
+// Bike spec catalog for the seat-height fit check. See ADR 0006.
 //
-// Deliberately NOT a database table. Nothing holds a foreign key to a bike yet
-// (rider reports are deferred), so this stays a const: editing a seat height is
-// a one-line diff instead of a migration and a reseed. When reports land they
-// can carry the slug as a plain string, the way GearItem ids already work.
+// Deliberately NOT a database table: nothing holds a foreign key to a bike yet,
+// so editing a seat height stays a one-line diff instead of a migration and a
+// reseed. Reports, when they land, can carry the slug as a plain string.
 //
 // !! THE NUMBERS BELOW ARE UNVERIFIED. !!
 // Seat heights were drafted from memory, not read off manufacturer spec sheets.
-// They are close, and "close" is precisely the failure this feature exists to
-// fix — a rider deciding on a purchase deserves the real figure. Every entry
-// needs a pass against the manufacturer's published spec before this ships.
+// Every entry needs a pass against the published spec before this ships.
 // `sagMm` and `seatWidth` are worse than unverified: nobody publishes them at
 // all. See ADR 0006 for why they're estimates by construction.
 
@@ -23,9 +19,8 @@ export type BikeCategory =
   | "dualsport";
 
 // Rider sag — how much the suspension gives up once someone sits on it, so the
-// seat at a stop is lower than the unladen figure on the spec sheet. Not
-// published by any manufacturer. These are per-category defaults in the usual
-// 30%-of-travel range; long-travel bikes sink furthest.
+// seat at a stop is lower than the unladen spec figure. No manufacturer
+// publishes it; these are per-category guesses at the usual 30% of travel.
 export const SAG_DEFAULTS_MM: Record<BikeCategory, number> = {
   cruiser: 25,
   sport: 30,
@@ -35,16 +30,13 @@ export const SAG_DEFAULTS_MM: Record<BikeCategory, number> = {
   dualsport: 45,
 };
 
-// Width of the seat where it meets the tank — the part your thighs straddle at
-// a stop. A wide nose splays the legs outward so they travel diagonally rather
-// than straight down, which costs reach the seat height never mentions. Also
-// unpublished; hand-classified per bike.
+// Width of the seat where it meets the tank. A wide nose splays the legs
+// outward so they travel diagonally rather than straight down, costing reach
+// the seat height never mentions. Also unpublished; hand-classified per bike.
 export type SeatWidth = "narrow" | "medium" | "wide";
 
-// Reach cost of the splay, in millimetres, applied on top of the sagged seat
-// height. Rough, empirical, and the first thing real rider reports should
-// replace — the whole point of the crowdsourced path is that these stop
-// mattering once a bike has testimony behind it.
+// Reach cost of the splay, in millimetres, on top of the sagged seat height.
+// Rough and unverified; rider reports should replace it.
 export const SPLAY_PENALTY_MM: Record<SeatWidth, number> = {
   narrow: 0,
   medium: 15,

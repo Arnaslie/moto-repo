@@ -1,7 +1,5 @@
-// Inseam input validation (no server/Prisma imports), same shape as lib/auth.ts.
-//
-// One number, stored as whole millimetres. See ADR 0006 for why it's inseam
-// rather than height, and why it's private.
+// Inseam input validation, same shape as lib/auth.ts. Stored as whole
+// millimetres. See ADR 0006 for why it's inseam rather than height, and private.
 
 export const INSEAM_MIN_MM = 500; // ~19.7in
 export const INSEAM_MAX_MM = 1100; // ~43.3in
@@ -24,10 +22,9 @@ export type Inseam = {
 type Result<T> = { ok: true; value: T } | { ok: false; error: string };
 
 /**
- * The bounds exist to catch unit slips, not to police bodies. Someone typing
- * their inseam in centimetres (76) or inches (30) instead of millimetres lands
- * far outside a plausible human range, and silently accepting it would hand
- * them a confident, wrong verdict — the exact failure this feature is for.
+ * The bounds exist to catch unit slips, not to police bodies: an inseam typed in
+ * centimetres (76) or inches (30) lands far outside them, and accepting it would
+ * hand the rider a confident, wrong verdict.
  */
 export function parseInseamInput(body: unknown): Result<InseamInput> {
   if (typeof body !== "object" || body === null) {
@@ -51,8 +48,8 @@ export function parseInseamInput(body: unknown): Result<InseamInput> {
   }
   const source = inseamSource as InseamSource;
 
-  // Spread only means something on the photo path — it's the disagreement
-  // between the three captures. A typed measurement has no spread to report.
+  // Spread is the disagreement between the three captures, so it only means
+  // something on the photo path.
   let spread: number | null = null;
   if (source === "photo") {
     if (typeof inseamSpreadMm !== "number" || !Number.isFinite(inseamSpreadMm) || inseamSpreadMm < 0) {

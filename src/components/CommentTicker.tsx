@@ -17,9 +17,9 @@ const SPEED_PX_PER_SEC = 60;
 const useIsomorphicLayoutEffect =
   typeof window !== "undefined" ? useLayoutEffect : useEffect;
 
-// The scrolling strip and the thread it opens. The comment tally and the
-// open/closed state are owned by PostFooter, which shares them with the action
-// row above — this component reports changes up rather than keeping its own.
+// The comment tally and the open/closed state are owned by PostFooter, which
+// shares them with the action row above — this component reports changes up
+// rather than keeping its own.
 export function CommentTicker({
   postId,
   comments: initialComments,

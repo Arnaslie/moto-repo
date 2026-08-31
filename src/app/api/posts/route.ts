@@ -7,7 +7,6 @@ import { postInclude, serializePost } from "@/lib/posts";
 const MAX_CONTENT_LENGTH = 500;
 const MAX_AUTHOR_LENGTH = 40;
 
-// GET /api/posts — newest posts first.
 export async function GET() {
   const viewer = await getCurrentUser();
   const rows = await prisma.post.findMany({
@@ -17,7 +16,6 @@ export async function GET() {
   return NextResponse.json({ posts: rows.map(serializePost) });
 }
 
-// POST /api/posts — create a new post.
 export async function POST(request: Request) {
   let body: unknown;
   try {
@@ -45,8 +43,8 @@ export async function POST(request: Request) {
 
   const currentUser = await getCurrentUser();
 
-  // Validate an optional attached image. Only a local /uploads path (produced
-  // by our own upload endpoint) is accepted, and only for signed-in users.
+  // Only URLs our own upload path produces, and only for signed-in users —
+  // otherwise a post is free to point imageUrl at anything.
   let resolvedImageUrl: string | null = null;
   if (imageUrl != null && imageUrl !== "") {
     if (typeof imageUrl !== "string" || !isValidUploadUrl(imageUrl)) {
@@ -61,7 +59,6 @@ export async function POST(request: Request) {
     resolvedImageUrl = imageUrl;
   }
 
-  // A post needs text, an image, or both.
   if (!trimmedContent && !resolvedImageUrl) {
     return NextResponse.json(
       { error: "Add some text or an image to post." },
@@ -69,8 +66,8 @@ export async function POST(request: Request) {
     );
   }
 
-  // Signed-in posts are attributed to the account (handle wins over any
-  // client-supplied author); anonymous posting still works otherwise.
+  // The account's handle wins over any client-supplied `author`, which is only
+  // honoured for anonymous posts.
   const resolvedAuthor = currentUser
     ? currentUser.handle
     : typeof author === "string" && author.trim()

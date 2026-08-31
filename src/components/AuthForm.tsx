@@ -44,8 +44,6 @@ export function AuthForm({
       if (!res.ok) throw new Error(data.error ?? "Something went wrong.");
 
       router.refresh();
-      // Somewhere to get back to beats the default landing — a rider who
-      // signed up to get into a room wants the room, not their empty profile.
       router.push(next ?? (isSignup ? `/profile/${data.user.handle}` : "/"));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
