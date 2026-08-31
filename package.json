@@ -9,7 +9,7 @@
     "build": "next build",
     "vercel-build": "prisma migrate deploy && tsx prisma/seed-catalog.ts && next build",
     "start": "next start",
-    "lint": "eslint",
+    "lint": "eslint --max-warnings 0",
     "db:migrate": "prisma migrate dev",
     "db:seed": "prisma db seed",
     "db:seed:catalog": "tsx prisma/seed-catalog.ts",
