@@ -1,0 +1,6 @@
+{
+  "//": "tsc for the pre-push hook: source only. tsconfig.json pulls in .next/types, which is gitignored and so goes stale across branch switches.",
+  "extends": "./tsconfig.json",
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", "**/*.mts"],
+  "exclude": ["node_modules", ".next"]
+}

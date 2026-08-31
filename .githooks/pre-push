@@ -1,0 +1,11 @@
+#!/bin/sh
+# Runs on `git push`; bypass with --no-verify if you really need to.
+set -e
+
+echo "pre-push: eslint"
+npm run lint
+
+echo "pre-push: tsc --noEmit"
+npx tsc --noEmit -p tsconfig.check.json
+
+echo "pre-push: ok"
