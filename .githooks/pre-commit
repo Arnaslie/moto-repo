@@ -1,0 +1,8 @@
+#!/bin/sh
+# Runs on `git commit`; bypass with --no-verify if you really need to.
+set -e
+
+echo "pre-commit: eslint"
+npm run lint
+
+echo "pre-commit: ok"
