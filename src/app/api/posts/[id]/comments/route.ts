@@ -5,8 +5,8 @@ import { commentSelect, serializeComment } from "@/lib/posts";
 import { MAX_COMMENT_LENGTH } from "@/lib/comments";
 import { emitComment } from "@/lib/notify";
 
-// GET /api/posts/[id]/comments — the full thread, oldest first. The feed only
-// ships the newest handful with each post, so this backs "load all".
+// The feed only ships the newest handful of comments with each post, so this
+// unpaginated read is what backs "load all".
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -27,7 +27,6 @@ export async function GET(
   return NextResponse.json({ comments: comments.map(serializeComment) });
 }
 
-// POST /api/posts/[id]/comments — add a comment. Signed-in users only.
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -75,9 +74,8 @@ export async function POST(
     return NextResponse.json({ error: "Post not found." }, { status: 404 });
   }
 
-  // The comment and the notification land together or not at all. A comment
-  // that tells nobody is a comment the author finds by scrolling back, which is
-  // the thing this whole layer exists to stop.
+  // The emit is inside the transaction: a comment that tells nobody is one the
+  // author only finds by scrolling back, which is what this layer exists to stop.
   const comment = await prisma.$transaction(async (tx) => {
     const created = await tx.comment.create({
       data: {
