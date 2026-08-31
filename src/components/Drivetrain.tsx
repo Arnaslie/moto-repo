@@ -5,32 +5,15 @@ import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import * as D from "@/lib/drivetrain";
 
-/* ---------------------------------------------------------------------------
-   The six-speed nav.
+/* React renders the structure once; everything that moves (the open amount,
+   the chain phase, the slack) is written straight onto the nodes from a single
+   rAF loop rather than re-rendering ~100 chain links a frame.
 
-   Two states, one component. At rest it's a gear-position readout — six dash
-   tiles, 40px, out of the way while you read. Reach for it and the whole
-   drivetrain drops down over the feed: cast sprockets, a chain that drives,
-   and room to aim at.
-
-   The gear numbers hold the same six columns in both states, so opening the
-   nav doesn't cross-fade one thing into another — the numbers travel down and
-   the parts assemble around them.
-
-   Two notes on how it's put together:
-
-   - React renders the structure once. Everything that moves (the open amount,
-     the chain phase, the slack) is written straight onto the nodes from a
-     single rAF loop. Re-rendering ~100 chain links a frame through React would
-     be silly, and none of it is state anyone else needs.
-   - The chain rides geometry sampled in lib/drivetrain, not a measured <path>,
-     so the resting state is in the server HTML and hydration has nothing to
-     disagree about.
---------------------------------------------------------------------------- */
+   The chain rides geometry sampled in lib/drivetrain, not a measured <path>, so
+   the resting state is in the server HTML and hydration has nothing to disagree
+   about. */
 
 /**
- * The draw pass has to run before the browser paints, not after.
- *
  * React owns the attributes it writes over, so on the frame a new page mounts
  * the panel is rendered at its resting height and `--grow` isn't set yet. As a
  * passive effect the correction lands one painted frame late, which is a visible
@@ -58,11 +41,9 @@ type Rig = {
   draw: (() => void) | undefined;
 };
 
-/* ---------------------------------------------------------------------------
-   The animation loop. Module scope on purpose: these run from effects and
-   event handlers, never during a render, and keeping them out of the component
-   body keeps that guarantee honest.
---------------------------------------------------------------------------- */
+/* Module scope on purpose: these run from effects and event handlers, never
+   during a render, and keeping them out of the component body keeps that
+   guarantee honest. */
 function startLoop(r: Rig) {
   if (r.raf) return;
   const frame = (now: number) => {
@@ -78,7 +59,6 @@ function startLoop(r: Rig) {
   r.raf = requestAnimationFrame(frame);
 }
 
-/** Starting a tween on a channel replaces whatever was already running on it. */
 function tween(r: Rig, key: Channel, to: number, ms: number) {
   r.tweens = r.tweens.filter((t) => t.key !== key);
   if (r.reduced || ms === 0) {
@@ -96,26 +76,9 @@ function custom(r: Rig, key: string, fn: (t: number) => void, ms: number) {
   startLoop(r);
 }
 
-/* ---------------------------------------------------------------------------
-   The shift runs before the navigation, not across it.
-
-   This was written when every page mounted its own SiteHeader and therefore its
-   own Drivetrain, so a gear click that navigated immediately unmounted the
-   component the animation was running in and the chain never got to turn.
-   Carrying the rig across that remount was one way out and it worked, but only
-   by making the animation depend on state surviving a teardown, and on nothing
-   else closing the panel in between. Something always was: the arriving page's
-   scroll-to-top, for one. So a real gear was made to do what the placeholder
-   gears do — run the animation in a component that is staying put — and only
-   then go.
-
-   The chrome now lives in app/(app)/layout.tsx and this component doesn't
-   unmount on an in-app navigation at all, so the teardown it was avoiding no
-   longer happens. The order stays: running the shift where you can see it
-   finish, and navigating when it's done, is the behaviour that was wanted — it
-   just no longer depends on the remount to enforce it. The panel is closed
-   explicitly on the way out, which is what a layout that persists requires.
---------------------------------------------------------------------------- */
+/* The shift runs before the navigation, not across it. See ADR 0005: the chrome
+   now lives in a layout and this component no longer unmounts on an in-app
+   navigation, so the panel is closed explicitly on the way out. */
 
 export function Drivetrain({ handle }: { handle: string | null }) {
   const pathname = usePathname();
@@ -159,7 +122,6 @@ export function Drivetrain({ handle }: { handle: string | null }) {
   // frame, so it can't be left to a JSX attribute.
   const dim = useRef<number[]>(gears.map(() => 1));
 
-  /* ---------------- the draw pass ---------------- */
   useDrawEffect(() => {
     const r = rig.current;
 
@@ -204,8 +166,6 @@ export function Drivetrain({ handle }: { handle: string | null }) {
         labelRefs.current[i]?.setAttribute("y", labelY.toFixed(2));
       }
 
-      // The loop inflates: both runs start collapsed onto one line and separate
-      // as the panel opens, so the chain is drawn on rather than faded on.
       const loop = D.sampleLoop(
         lerp(4, D.RADIUS, k),
         lerp(D.NUM_Y_DASH + 3, D.CY, k),
@@ -267,13 +227,11 @@ export function Drivetrain({ handle }: { handle: string | null }) {
     rig.current.draw?.();
   });
 
-  // Signing in or out changes which gears are reachable.
   useEffect(() => {
     dim.current = D.gearsFor(handle).map((g) => (g.href === null && g.auth ? 0.5 : 1));
     rig.current.draw?.();
   }, [handle]);
 
-  /* ---------------- open and close ---------------- */
   const setOpenTo = (want: boolean, delay = 0) => {
     if (hoverTimer.current) clearTimeout(hoverTimer.current);
     const go = () => {
@@ -284,22 +242,15 @@ export function Drivetrain({ handle }: { handle: string | null }) {
     else go();
   };
 
-  /* ---------------- shifting ----------------
-     One shift, two ways in.
+  /* `runShift` returns how long the shift takes so the caller can decide what
+     happens after; a gear click calls it and *then* navigates (see the Link
+     below).
 
-     `runShift` is the animation itself: the chain runs the real distance
-     between two sprockets, and it returns how long that takes so the caller can
-     decide what happens after. A gear click calls it and *then* navigates (see
-     the Link below) — that's what keeps the whole thing inside a component
-     that isn't about to be torn down.
-
-     The effect is the other way in, for a path that changed without going
+     The effect below is the other way in, for a path that changed without going
      through the click — a redirect, or moving between two pages that share a
      component so React keeps the instance. It is deliberately *not* a fallback
      for the back button: that remounts, which starts prevGear equal to the gear
-     arrived at, so nothing runs. Animating an arrival you didn't ask for is the
-     thing this component kept trying to do and kept getting wrong; a shift you
-     watch is one you asked for. The guard is also what stops a click's own
+     arrived at, so nothing runs. The guard is also what stops a click's own
      shift being run a second time on the far side. */
   const runShift = useCallback((to: number) => {
     const from = prevGear.current;
@@ -350,8 +301,7 @@ export function Drivetrain({ handle }: { handle: string | null }) {
      
   }, []);
 
-  // A gear that isn't there: the chain takes up, shudders, and drops back. The
-  // jolt goes into the rig rather than onto the node, because the draw pass
+  // The jolt goes into the rig rather than onto the node, because the draw pass
   // rewrites every sprocket transform on the same frame.
   const grind = (i: number) => {
     const r = rig.current;
@@ -419,8 +369,6 @@ export function Drivetrain({ handle }: { handle: string | null }) {
           className="block h-auto w-full select-none"
           aria-hidden
         >
-          {/* the neutral lamp — a dash fixture, unlit until you're off-route,
-              sitting in the margin rather than pretending to be a seventh tab */}
           <g ref={lampRef}>
             <rect
               x={2}
@@ -444,7 +392,6 @@ export function Drivetrain({ handle }: { handle: string | null }) {
             </text>
           </g>
 
-          {/* resting state: the dash tiles */}
           {gears.map((gear, i) => {
             const on = gear.n === engaged;
             const blank = notBuilt(gear);
@@ -474,7 +421,6 @@ export function Drivetrain({ handle }: { handle: string | null }) {
             );
           })}
 
-          {/* open state: the sprockets */}
           {gears.map((gear, i) => {
             const on = gear.n === engaged;
             const blank = notBuilt(gear);

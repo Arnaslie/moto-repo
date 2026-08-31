@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/session";
 
-// DELETE /api/motorcycles/[id] — remove a bike from the owner's garage.
 export async function DELETE(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },

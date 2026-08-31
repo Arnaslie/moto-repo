@@ -1,11 +1,9 @@
-// Drivetrain geometry for the six-speed nav. Plain maths, no React/Next
-// imports, so the shapes can be generated on the server and the client alike
-// — the nav renders its resting state in the HTML, before any JS runs.
+// Drivetrain geometry for the six-speed nav. Keep it free of React/Next
+// imports: the nav renders its resting state in the HTML, before any JS runs.
 //
-// Everything here is derived from the chain pitch, which is the only number
-// picked by eye. Deriving the pitch radius from the pitch and the tooth count
-// (rather than the other way round) is what makes the rollers seat in the
-// valleys instead of near them.
+// The chain pitch is the only number picked by eye. Deriving the pitch radius
+// from the pitch and the tooth count (rather than the other way round) is what
+// makes the rollers seat in the valleys instead of near them.
 
 export const PITCH = 10.5; // distance between roller centres
 export const TEETH = 13; // per sprocket
@@ -40,10 +38,9 @@ export const SAG_LOOSE = 12; // ...and with nothing engaged
 
 /**
  * The tooth profile is sampled, not drawn: radius as a function of position
- * within one tooth pitch. A raised cosine put through a smoothstep with a
- * plateau at each end gives flat-bottomed valleys for the roller to sit in and
- * flat-topped teeth. A plain cosine gives pointed spikes — that's a gear, not
- * a sprocket.
+ * within one tooth pitch. The smoothstep is what gives flat-bottomed valleys
+ * and flat tips; a plain cosine gives pointed spikes — that's a gear, not a
+ * sprocket.
  *
  * u = 0 sits at the centre of a roller seat, so a valley points straight up
  * when the sprocket is at angle 0.
@@ -67,8 +64,8 @@ export function sprocketPath(scale = 1, steps = 20): string {
 }
 
 /**
- * A lightening window: an arc meant to be stroked at the width of the web with
- * round caps, which punches a kidney hole through the part with no path maths.
+ * A lightening window. Only reads as a kidney hole when stroked at `webWidth`
+ * with round caps — it is an arc, not an outline.
  */
 export function windowArc(scale: number, index: number): string {
   const rMid = ((ROOT + 10.5) / 2) * scale;
@@ -85,9 +82,8 @@ export const WINDOW_COUNT = 5;
 export const HUB_R = 9.6;
 
 /**
- * One chain link, drawn from its roller to the next: a plate with a waist,
- * rounded over a roller at each end. Outer and inner plates alternate, as they
- * do on a real chain.
+ * One chain link, from its roller to the next. Callers must alternate outer and
+ * inner plates, as a real chain does.
  */
 export function platePath(outer: boolean, scale = 1): string {
   const ro = (outer ? 3.1 : 2.4) * scale;
@@ -104,9 +100,9 @@ export const ROLLER_R = 1.85;
 /* ---------------------------------------------------------------------------
    The chain loop.
 
-   Sampled into a polyline rather than measured off a rendered <path>, so the
-   same numbers come out on the server and in the browser — no getTotalLength,
-   no layout read, and no hydration mismatch. A chain is a polygon anyway.
+   Sampled into a polyline rather than measured off a rendered <path>: no
+   getTotalLength, no layout read, so the same numbers come out on the server
+   and in the browser and there is no hydration mismatch.
 --------------------------------------------------------------------------- */
 
 export type Loop = { xs: number[]; ys: number[]; cum: number[]; total: number };
@@ -155,7 +151,6 @@ export function sampleLoop(rr: number, cy: number, sag: number): Loop {
   for (let i = 1; i < xs.length; i++) {
     cum.push(cum[i - 1] + Math.hypot(xs[i] - xs[i - 1], ys[i] - ys[i - 1]));
   }
-  // close it: the last point back to the first
   const total = cum[cum.length - 1] + Math.hypot(xs[0] - xs[xs.length - 1], ys[0] - ys[ys.length - 1]);
   return { xs, ys, cum, total };
 }
@@ -192,15 +187,10 @@ export function pointAt(loop: Loop, s: number): LoopPoint {
 }
 
 /**
- * How many links the chain carries. Fixed at what the fully open loop needs, so
- * opening and closing never rebuilds it — the links just ride a shorter path
- * and bunch up a little while the loop is still inflating.
+ * Fixed at what the fully open loop needs, so opening and closing never rebuilds
+ * the chain — the links ride a shorter path and bunch up while it inflates.
  */
 export const LINK_COUNT = Math.round(sampleLoop(RADIUS, CY, SAG_DRIVE).total / PITCH);
-
-/* ---------------------------------------------------------------------------
-   The gearing.
---------------------------------------------------------------------------- */
 
 export type Gear = {
   n: number;
@@ -212,15 +202,13 @@ export type Gear = {
 };
 
 /**
- * First is where you pull away, so it's the feed. Sixth is the cruising gear,
- * so it's you. Fourth is named but not built: it renders as an empty sprocket,
- * which puts the roadmap in the nav where we'll trip over it.
+ * The order is deliberate and written down nowhere else — there is no ADR for
+ * the gearbox. First is where you pull away, so it's the feed. Fifth is Comms,
+ * because an intercom is what you're in once you've stopped moving. Sixth is
+ * the cruising gear, so it's you.
  *
- * Fifth is Comms — the intercom. It sits high in the box on purpose: it's what
- * you're in when you've stopped moving and settled into a conversation.
- *
- * Third is Fit (ADR 0006) — the seat-height check. It took the slot Garage was
- * holding; Garage has no gear now and wants one of the remaining blanks.
+ * Gear 3 is Fit (ADR 0006); it took the slot Garage was holding, so Garage is
+ * unplaced and wants one of the remaining blanks.
  */
 export function gearsFor(handle: string | null): Gear[] {
   return [
@@ -236,10 +224,9 @@ export function gearsFor(handle: string | null): Gear[] {
 /**
  * The engaged gear for a path, or 0 for neutral — anywhere outside the six.
  *
- * A page nested under a gear counts as that gear: you're in a Comms room, so
- * you're in fifth, not coasting in neutral. Only ever a *child* path, which is
- * why the gears with parameterised hrefs are unaffected — `/profile/someone`
- * isn't under `/profile/you`, and `/` can't prefix-match anything but itself.
+ * A page nested under a gear counts as that gear. The trailing slash is what
+ * keeps it to *child* paths: without it `/` prefix-matches every route, and
+ * `/profile/someone` would engage `/profile/you`.
  */
 export function gearForPath(gears: Gear[], pathname: string): number {
   const engaged = gears.find(

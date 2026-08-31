@@ -2,13 +2,10 @@ import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/session";
 import { blobUploadsEnabled, saveUpload } from "@/lib/uploads";
 
-// POST /api/uploads — accept a single image file (multipart/form-data, field
-// "file") and return its public URL. Requires a signed-in user.
-//
-// This is the local-disk path only. Where Blob is configured the browser goes
-// direct (see ./token/route.ts), and writing to disk there would be worse than
-// useless — the file would land on a container that's about to disappear — so
-// this refuses rather than silently succeeding.
+// The local-disk path only. Where Blob is configured the browser goes direct
+// (see ./token/route.ts); writing to disk there would land the file on a
+// container that's about to disappear, so this refuses rather than silently
+// succeeding.
 export async function POST(request: Request) {
   if (blobUploadsEnabled()) {
     return NextResponse.json(

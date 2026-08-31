@@ -13,7 +13,6 @@ function serialize(m: {
   return { id: m.id, year: m.year, make: m.make, model: m.model, nickname: m.nickname };
 }
 
-// POST /api/motorcycles — add a bike to the signed-in user's garage.
 export async function POST(request: Request) {
   const user = await getCurrentUser();
   if (!user) {

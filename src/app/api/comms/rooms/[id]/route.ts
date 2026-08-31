@@ -4,8 +4,7 @@ import { getCurrentUser } from "@/lib/session";
 import { parseTitle } from "@/lib/comms";
 import { roomSelect, serializeRoom } from "@/lib/rooms";
 
-// Both handlers below are host-only, and both need the same three checks in
-// the same order. Doing it once keeps the 404-vs-403 distinction consistent:
+// Both handlers are host-only. Shared so the 404-vs-403 split stays consistent:
 // a closed room reads as gone, someone else's room reads as forbidden.
 async function requireHostedRoom(id: string) {
   const user = await getCurrentUser();
@@ -27,11 +26,6 @@ async function requireHostedRoom(id: string) {
   return { room };
 }
 
-// PATCH /api/comms/rooms/[id] — retitle a live room.
-//
-// Worth having on day one rather than later: the title is what fills the room,
-// and a conversation that opens on carb sync ends up on rally routes. A host
-// who can't follow the drift has to close and reopen, which throws everyone out.
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -61,11 +55,8 @@ export async function PATCH(
   return NextResponse.json({ room: serializeRoom(room) });
 }
 
-// DELETE /api/comms/rooms/[id] — close the room.
-//
 // A close is a timestamp, not a delete: the row is what the chat scrollback
-// will hang off later, and "when did that room run" is worth keeping even when
-// nobody's in it.
+// will hang off later.
 export async function DELETE(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },

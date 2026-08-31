@@ -1,20 +1,15 @@
-// Comment rules and pure helpers. Deliberately free of Next/React/Prisma
-// imports so a future mobile client can share this module (same convention as
-// lib/motorcycles.ts and lib/gear.ts).
+// Comment rules and pure helpers. Keep it free of Next/React/Prisma imports.
 
 // Shorter than a post's 500 — comments crawl past in a ticker, so they have to
 // stay readable at a glance.
 export const MAX_COMMENT_LENGTH = 280;
 
-// How many of the newest comments ride along with each post in the feed
-// payload. Anything beyond this is fetched on demand when the thread expands.
+// How many of the newest comments ride along in the feed payload; the rest are
+// fetched when the thread expands.
 export const TICKER_COMMENT_LIMIT = 12;
 
-// Characters shown per ticker item before it's cut off.
 export const TICKER_PREVIEW_CHARS = 90;
 
-// Shorten a comment for the scrolling strip, breaking on a word boundary when
-// there's a reasonable one nearby so we don't slice words in half.
 export function truncateForTicker(
   text: string,
   limit = TICKER_PREVIEW_CHARS,

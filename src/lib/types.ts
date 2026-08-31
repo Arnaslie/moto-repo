@@ -7,9 +7,8 @@ export type PostAuthorAvatar = {
   equipped: { slot: SlotKey; asset: string; color: string | null }[];
 };
 
-// A comment as serialized over the API / to the client. Commenting requires an
-// account, so `avatar` is always present in practice — typed nullable only to
-// stay symmetric with Post and tolerate a missing user row.
+// Commenting requires an account, so `avatar` is always present in practice —
+// nullable only to stay symmetric with Post and tolerate a missing user row.
 export type Comment = {
   id: string;
   author: string;

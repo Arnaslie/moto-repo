@@ -12,18 +12,12 @@
   --font-mono: var(--font-geist-mono);
 }
 
-/* ---------------------------------------------------------------------------
-   Drivetrain — the six-speed nav in the header.
+/* Drivetrain — the six-speed nav in the header.
 
-   Cast steel for the sprockets, a darker alloy for the chain, and the brand
-   orange for whichever gear is engaged. The one colour that isn't already in
-   the palette is the green neutral lamp, which is the colour it is on every
-   bike dash ever made.
-
-   The windows punched through each sprocket and the hollow of each chain
-   roller are painted in --background, so they read as holes through the part
-   rather than shapes drawn on it. That's why they're tokens and not literals:
-   the parts have to sit on whatever the page ground is.
+   --drive-lamp is green because that's the colour of a neutral lamp on every
+   bike dash. The sprocket windows and chain-roller hollows are painted in
+   --background rather than a literal so they read as holes through the part on
+   whatever the page ground is.
 --------------------------------------------------------------------------- */
 :root {
   --drive-steel: #d5dae0;
@@ -41,14 +35,9 @@
   --drive-accent-soft: rgba(249, 115, 22, 0.12);
 }
 
-/* ---------------------------------------------------------------------------
-   The pod filter in the wordmark.
-
-   One line weight, one colour, no fills — so it sits on whatever's behind it,
-   including the header's translucent ground, without punching a hole in it.
-   The brand orange carries both schemes the same way --drive-accent does, so
-   unlike the rest of the palette this one needs no dark-mode counterpart.
---------------------------------------------------------------------------- */
+/* The pod filter in the wordmark. The brand orange carries both schemes the
+   same way --drive-accent does, so unlike the rest of the palette this token
+   deliberately has no dark-mode counterpart below. */
 :root {
   --pod-line: #f97316;
 }
@@ -80,11 +69,8 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
-/* ---------------------------------------------------------------------------
-   The wave — the hand tips left, then right, then settles, the way a rider's
-   does coming off the clutch. Runs once when you wave, never when you take it
-   back (nobody celebrates that).
---------------------------------------------------------------------------- */
+/* The rotations trace a rider's hand coming off the clutch: tip left, tip
+   right, settle. Applied on waving only, never on taking a wave back. */
 @keyframes wave-salute {
   0% {
     transform: rotate(0deg) scale(1);
@@ -114,15 +100,9 @@ body {
   }
 }
 
-/* ---------------------------------------------------------------------------
-   Comment ticker — the ESPN-style bottom line on each post card.
-
-   The track holds two identical copies of the comment list. Translating it by
-   -50% moves it exactly one copy's width, so the second copy lands where the
-   first started and the loop is seamless. Duration is set per-ticker via the
-   --ticker-duration custom property (written from JS after measuring), which
-   keeps the crawl at a constant px/sec no matter how many comments there are.
---------------------------------------------------------------------------- */
+/* Comment ticker. The track holds two identical copies of the comment list, so
+   -50% is exactly one copy's width and the loop is seamless. --ticker-duration
+   is written from JS after measuring, to hold a constant px/sec. */
 @keyframes ticker-scroll {
   from {
     transform: translateX(0);
@@ -137,9 +117,7 @@ body {
   will-change: transform;
 }
 
-/* Pause so it can actually be read: on hover, while keyboard focus is inside,
-   while the thread is open, and whenever the post is scrolled out of view (so
-   a long feed isn't animating dozens of off-screen strips). */
+/* Paused off-screen too, so a long feed isn't animating dozens of strips. */
 .ticker-shell:hover .ticker-track,
 .ticker-shell:focus-within .ticker-track,
 .ticker-shell[data-expanded="true"] .ticker-track,

@@ -123,8 +123,11 @@ count beside it carries the orange; the wheel doesn't.
 - **The word "Messages" is gone** from the header. An icon in a control cluster
   is a guess for anyone who hasn't clicked it once.
 - The measurement rig — circle fit, polar unwrap, angular walks — was scratch
-  work and is not in the repo. Re-deriving means rebuilding it. The numbers and
-  the method are written down in `icons.tsx`; the script isn't.
+  work and is not in the repo. Re-deriving means rebuilding it. **The method is
+  the "geometry is measured" section above**; `icons.tsx` carries the resulting
+  numbers with a source note on each, and points back here. (It once carried the
+  derivation too, which made this line true when it was written; the prose was
+  cut when the repo's comments were, and the record is the right home for it.)
 
 ---
 

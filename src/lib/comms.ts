@@ -1,16 +1,10 @@
-// Comms — the intercom. Gear 5.
+// Comms — the intercom. Gear 5. Keep this half free of React/Next/Prisma
+// imports.
 //
-// Voice rooms for riders who are *off* the bike: parked up on a long stop, in
-// the garage, or at home. Cardo already owns the in-motion case and it's bolted
-// to a helmet; this is a hangout with a mic, not safety kit.
-//
-// Shape of a room: a host opens it and takes the first of four mic seats ("the
-// floor"). Everyone else is "the pack" — they hear the floor and talk in text,
-// which is what stops the seat limit from being a queue for the right to
-// participate. It caps how many people talk over each other, nothing more.
-//
-// No React, no Next, no Prisma imports: this is the pure half, so route
-// handlers and components can share it.
+// Voice rooms for riders who are *off* the bike; Cardo owns the in-motion case.
+// A host opens a room and takes the first of four mic seats ("the floor");
+// everyone else is "the pack", hearing the floor and talking in text. The seat
+// limit caps who talks over whom — it is not a queue to participate.
 
 /** Mic seats on the floor. A product choice, not a technical limit — real
  *  Cardo DMC carries 15. Four is how many people can hold one conversation. */
@@ -18,8 +12,7 @@ export const SEATS = 4;
 
 export const TITLE_MAX = 80;
 
-/** Topics are tags on a room, not permanent channels. Rooms come and go with
- *  the people in them; these are just how you find one you care about. */
+/** Topics are tags on a room, not permanent channels. */
 export const TOPICS = [
   { id: "maintenance", label: "Maintenance", blurb: "Spanners, diagnosis, what that noise is" },
   { id: "rally", label: "Rally & rides", blurb: "Meets, routes, who's going" },
@@ -39,9 +32,8 @@ export function topicLabel(id: string): string {
   return TOPICS.find((t) => t.id === id)?.label ?? "General";
 }
 
-/** A room as the directory and the room page see it. `host` is the handle —
- *  denormalized on read rather than stored, since rooms always join their
- *  host anyway and a handle can change. */
+/** A room as the directory and the room page see it. `host` is the handle,
+ *  joined on read rather than stored, since a handle can change. */
 export type RoomSummary = {
   id: string;
   title: string;
@@ -59,11 +51,6 @@ export type OpenRoomInput = { title: string; topic: TopicId };
 
 type Parsed<T> = { ok: true; value: T } | { ok: false; error: string };
 
-/**
- * A room's title is the whole advertisement — it's what makes a passing rider
- * walk in, so it's the one field worth validating properly. Everything else
- * about the room is either derived or chosen from a fixed list.
- */
 export function parseOpenRoomInput(body: unknown): Parsed<OpenRoomInput> {
   if (typeof body !== "object" || body === null) {
     return { ok: false, error: "Expected a JSON object." };
@@ -96,7 +83,6 @@ export function parseTitle(title: unknown): Parsed<string> {
   return { ok: true, value: trimmed };
 }
 
-/** "4 riders", "1 rider" — used in a few places, easy to get wrong in each. */
 export function riderCount(n: number): string {
   return `${n} rider${n === 1 ? "" : "s"}`;
 }

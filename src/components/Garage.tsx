@@ -65,13 +65,13 @@ export function Garage({
 
   async function removeBike(id: string) {
     const prev = bikes;
-    setBikes((b) => b.filter((x) => x.id !== id)); // optimistic
+    setBikes((b) => b.filter((x) => x.id !== id));
     try {
       const res = await fetch(`/api/motorcycles/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error();
       router.refresh();
     } catch {
-      setBikes(prev); // revert on failure
+      setBikes(prev);
     }
   }
 

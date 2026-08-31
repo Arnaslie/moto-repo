@@ -18,17 +18,12 @@ export type LoginInput = {
 type Result<T> = { ok: true; value: T } | { ok: false; error: string };
 
 /**
- * Where to send someone once they've signed in, when they were interrupted on
- * the way somewhere else.
+ * Where to send someone once they've signed in. Only ever a path on this site:
+ * `//evil.com` and `/\evil.com` start with a slash but a browser normalises
+ * them into protocol-relative URLs, so they're refused rather than escaped, and
+ * a newline in a redirect target is header-splitting material.
  *
- * Only ever a path on this site. `//evil.com` and `/\evil.com` both start with
- * a slash but a browser normalises them into protocol-relative URLs, which
- * would turn our login page into a redirect service for somebody else's — so
- * they're refused rather than escaped. Control characters go too: a newline in
- * a redirect target is header-splitting material.
- *
- * Bouncing back to /login or /signup is a loop, so those don't count as
- * somewhere to return to.
+ * /login and /signup are excluded because bouncing back to them is a loop.
  */
 export function safeNextPath(value: unknown): string | null {
   if (typeof value !== "string" || !value.startsWith("/")) return null;

@@ -6,24 +6,13 @@ import { Avatar } from "@/components/Avatar";
 import { MAX_MESSAGE_LENGTH, type ConversationSummary, type MessageDTO } from "@/lib/messages";
 import { timeAgo } from "@/lib/format";
 
-/* ---------------------------------------------------------------------------
-   A thread.
-
-   The only screen in the app where you're waiting on a specific person to
-   answer, which is what sets its tempo: it polls three times faster than the
-   feed or the Comms directory, and the composer sends optimistically so your
-   own line never waits on a round trip.
-
-   It is still a poll. ADR 0001 specifies an SSE stream to replace this, and the
-   two seams it needs are already here — `mergeMessages` is idempotent by id,
-   and the cursor is a timestamp — so the swap is a change of source, not a
-   rewrite of the view.
---------------------------------------------------------------------------- */
+/* A thread, polled. See ADR 0003, and ADR 0001 for the SSE stream meant to
+   replace this: `mergeMessages` being idempotent by id and the cursor being a
+   timestamp are the two seams that swap needs. */
 
 const POLL_MS = 3000;
 
-// A temporary id for a message that hasn't been acknowledged yet. Prefixed so
-// it can never collide with a cuid from the server.
+// Prefixed so a pending id can never collide with a cuid from the server.
 const pendingId = (n: number) => `pending:${n}`;
 
 export function Thread({
@@ -44,8 +33,6 @@ export function Thread({
   const endRef = useRef<HTMLDivElement>(null);
   const pendingRef = useRef(0);
 
-  // Clear the unread count on arrival, and again whenever something lands while
-  // the thread is on screen — if you're reading it, you've read it.
   const markRead = useCallback(() => {
     fetch(`/api/messages/conversations/${conversation.id}/read`, {
       method: "POST",
@@ -66,9 +53,9 @@ export function Thread({
     messagesRef.current = messages;
   }, [messages]);
 
-  // Poll for anything the other rider has said. The cursor is the newest
-  // *server* timestamp we hold — a pending message of our own has none yet, and
-  // taking its absence as "the beginning of time" would refetch the thread.
+  // The cursor is the newest *server* timestamp we hold — a pending message of
+  // our own has none yet, and taking its absence as "the beginning of time"
+  // would refetch the thread.
   useEffect(() => {
     let active = true;
 
@@ -128,8 +115,6 @@ export function Thread({
     const body = trimmed;
     const optimisticId = pendingId(pendingRef.current++);
 
-    // Optimistic: your own line appears now and the server catches up, the way
-    // a wave flips before it's saved.
     setMessages((prev) => [
       ...prev,
       { id: optimisticId, body, sender: me, createdAt: new Date().toISOString() },
@@ -147,14 +132,10 @@ export function Thread({
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error ?? "Couldn't send that.");
 
-      // Swap the placeholder for the server's row, which carries the real id
-      // and the real timestamp.
       setMessages((prev) =>
         prev.map((m) => (m.id === optimisticId ? (data.message as MessageDTO) : m)),
       );
     } catch (err) {
-      // Take the line back out and hand the text back to the composer, so a
-      // failed send doesn't cost someone what they typed.
       setMessages((prev) => prev.filter((m) => m.id !== optimisticId));
       setDraft(body);
       setError(err instanceof Error ? err.message : "Couldn't send that.");
@@ -169,8 +150,6 @@ export function Thread({
   }
 
   function onKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
-    // Enter sends, Shift+Enter breaks the line. A DM is a conversation, so the
-    // common case is one line and a return key that means "say it".
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       void send();
@@ -279,8 +258,6 @@ function EmptyThread({ handle }: { handle: string }) {
 }
 
 function Bubble({ message, mine }: { message: MessageDTO; mine: boolean }) {
-  // Yours in the brand orange on the right, theirs plain on the left. The side
-  // is what's actually read at a glance; the colour is the confirmation.
   return (
     <li className={`flex ${mine ? "justify-end" : "justify-start"}`}>
       <div className={`max-w-[80%] ${mine ? "items-end" : "items-start"}`}>

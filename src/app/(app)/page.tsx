@@ -4,12 +4,11 @@ import { getCurrentUser, getWaveViewer } from "@/lib/session";
 import { postInclude, serializePost } from "@/lib/posts";
 import { blobUploadsEnabled } from "@/lib/uploads";
 
-// Always render fresh from the database.
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  // The viewer comes first: which posts they've already waved at is part of the
-  // feed query, not something the client patches in afterwards.
+  // Which posts the viewer has waved at is part of the feed query below, not
+  // something the client patches in afterwards.
   const user = await getCurrentUser();
 
   const rows = await prisma.post.findMany({

@@ -11,8 +11,6 @@ export type EquippedItem = {
 
 type ShapeProps = { color: string; gradientId: string };
 
-// ---- Shape registry: each gear `asset` maps to an SVG drawing ----------------
-
 function Background({ asset, color, gradientId }: ShapeProps & { asset: string }) {
   if (asset === "bg-gradient") {
     return (

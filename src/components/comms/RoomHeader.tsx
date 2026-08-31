@@ -5,15 +5,8 @@ import { useState } from "react";
 import { TITLE_MAX, topicLabel, type RoomSummary } from "@/lib/comms";
 import { timeAgo } from "@/lib/format";
 
-/* ---------------------------------------------------------------------------
-   The strip at the top of a room: what this is, who's running it, and — if
-   that's you — the two controls a host has before any audio exists.
-
-   Retitling is here rather than in a settings screen because the title is the
-   only thing advertising the room. A conversation that opens on carb sync ends
-   up on rally routes, and a host who can't follow the drift has to close and
-   reopen, which throws everyone out.
---------------------------------------------------------------------------- */
+/* Retitling is inline rather than in a settings screen: a host who can't follow
+   the room's drift has to close and reopen, which throws everyone out. */
 
 export function RoomHeader({ room, isHost }: { room: RoomSummary; isHost: boolean }) {
   const router = useRouter();

@@ -18,9 +18,6 @@ export default async function ThreadPage({
 }) {
   const { id } = await params;
 
-  // Carry the thread along through login, the way a room link does — a DM
-  // notification will eventually land as a link into here, and dropping someone
-  // on the feed instead loses what they came for.
   const user = await getCurrentUser();
   if (!user) redirect(`/login?next=${encodeURIComponent(`/messages/${id}`)}`);
 

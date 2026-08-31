@@ -12,15 +12,12 @@ export const metadata = {
 
 export const dynamic = "force-dynamic";
 
-/**
- * Third gear (ADR 0006).
- *
- * The inseam is read here, in the rider's own request, and handed only to their
- * own page. `getCurrentUser` deliberately doesn't select it — the layout passes
- * that object to the header on every page in the app, and body data has no
- * business riding along. This is the one query that reads it, and it is keyed
- * on the session id, never on a handle from the URL.
- */
+// Third gear. See ADR 0006.
+//
+// `getCurrentUser` deliberately doesn't select the inseam: the layout hands that
+// object to the header on every page, and body data has no business riding
+// along. This is the one query that reads it, keyed on the session id and never
+// on a handle from the URL.
 export default async function FitPage() {
   const user = await getCurrentUser();
   if (!user) redirect(`/login?next=${encodeURIComponent("/fit")}`);

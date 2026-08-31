@@ -24,7 +24,6 @@ function serialize(row: {
   };
 }
 
-// GET /api/locations — riders currently sharing a fresh position.
 export async function GET() {
   const since = new Date(Date.now() - ACTIVE_WINDOW_MS);
   const rows = await prisma.location.findMany({
@@ -34,8 +33,8 @@ export async function GET() {
   return NextResponse.json({ locations: rows.map(serialize) });
 }
 
-// POST /api/locations — upsert my current position (or set sharing=false to
-// go invisible). One row per rider handle.
+// One row per rider handle: going invisible is sharing=false, not a delete, so
+// the next position update has a row to land on.
 export async function POST(request: Request) {
   let body: unknown;
   try {

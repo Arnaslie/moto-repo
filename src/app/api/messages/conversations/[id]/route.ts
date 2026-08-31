@@ -9,12 +9,9 @@ import {
 } from "@/lib/conversations";
 import { requireParticipant } from "@/lib/thread";
 
-// GET /api/messages/conversations/[id] — a thread and its messages.
-//
-// Serves two callers with one shape. Without `?after=` it's the whole thread,
-// which is what the page load wants; with it, only what's arrived since, which
-// is what the poll wants. The alternative — a second "new messages" route —
-// would be the same query with a different name.
+// One shape for two callers: without `?after=` the page load gets the whole
+// thread, with it the poll gets only what's arrived since. A separate "new
+// messages" route would be this same query under a different name.
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
@@ -34,8 +31,8 @@ export async function GET(
     prisma.message.findMany(threadMessagesQuery(id, after)),
   ]);
 
-  // requireParticipant just read this row, so it exists — but the type is
-  // nullable and a non-null assertion here would be a lie waiting to be true.
+  // Unreachable — requireParticipant just read this row — but a non-null
+  // assertion here would be a lie waiting to come true.
   if (!conversation) {
     return NextResponse.json(
       { error: "That conversation doesn't exist." },

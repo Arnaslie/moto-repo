@@ -1,12 +1,10 @@
-// Prisma query shapes for direct messages, and the serializers that turn rows
-// into the DTOs in lib/messages.ts. Same split as rooms.ts sitting beside
-// comms.ts: the rules are pure, the `select`s live here.
+// The Prisma half of lib/messages.ts: the `select`s and the serializers.
 
 import type { ConversationSummary, MessageDTO } from "./messages";
 import { authorAvatar } from "./posts";
 
-// Everything a message needs to render. The sender's handle is joined rather
-// than denormalized onto the row — see the Message model comment.
+// The sender's handle is joined rather than denormalized onto the row — see the
+// Message model comment.
 export const messageSelect = {
   id: true,
   body: true,
@@ -14,9 +12,8 @@ export const messageSelect = {
   sender: { select: { handle: true } },
 } as const;
 
-// A conversation together with both sides and its newest line. `messages` takes
-// exactly one: the inbox shows a preview, and loading a whole thread to render
-// a single line of it is how an inbox gets slow.
+// `messages` takes exactly one: the inbox only shows a preview, and loading a
+// whole thread to render one line of it is how an inbox gets slow.
 export const conversationSelect = {
   id: true,
   lastMessageAt: true,
@@ -24,8 +21,7 @@ export const conversationSelect = {
     select: {
       userId: true,
       unreadCount: true,
-      // The gear join is the same one the feed does for a post author, so an
-      // inbox row can render the rider rather than just name them.
+      // The same equipped-gear join the feed does for a post author.
       user: {
         select: {
           handle: true,
@@ -46,8 +42,7 @@ export const conversationSelect = {
   },
 } as const;
 
-// The subsets the serializers need, structural so Prisma results pass straight
-// in without a cast.
+// Structural, so Prisma results pass straight in without a cast.
 type MessageRow = {
   id: string;
   body: string;
@@ -81,14 +76,12 @@ export function serializeMessage(message: MessageRow): MessageDTO {
 }
 
 /**
- * Viewer-specific, unavoidably: which side is "the other rider" and how many
- * messages are waiting both depend on who's asking. Callers pass the viewer's
- * id, the same way postInclude() takes a wave viewer.
+ * Viewer-specific: which side is "the other rider" and how many messages wait
+ * both depend on who's asking.
  *
- * The `?? row.participants[0]` fallback is for a row where the viewer somehow
- * isn't a participant. Route handlers reject that with a 403 before they get
- * here, so it's belt-and-braces — but a serializer that can throw is a
- * serializer that takes the page down.
+ * The `?? row.participants[0]` fallback covers a row where the viewer isn't a
+ * participant. Handlers 403 that before it gets here, so it is belt-and-braces
+ * — but a serializer that can throw takes the page down.
  */
 export function serializeConversation(
   row: ConversationRow,
@@ -110,7 +103,6 @@ export function serializeConversation(
   };
 }
 
-/** The inbox's one query: every thread I'm in, most recently spoken in first. */
 export function inboxQuery(userId: string) {
   return {
     where: { participants: { some: { userId } } },
@@ -120,13 +112,10 @@ export function inboxQuery(userId: string) {
 }
 
 /**
- * A thread's messages, oldest first — the order they're read in.
- *
  * `after` is the poll's cursor, and it's deliberately inclusive (`gte`, not
- * `gt`): timestamps are millisecond-precision, so two messages can in principle
- * share one, and an exclusive cursor would silently drop the second forever.
- * The cost is that each tick re-sends the message the client already has, which
- * it discards by id. Re-sending one line beats losing one.
+ * `gt`): timestamps are millisecond-precision, so two messages can share one and
+ * an exclusive cursor would drop the second forever. The cost is re-sending the
+ * message the client already has, which it discards by id.
  */
 export function threadMessagesQuery(conversationId: string, after?: Date | null) {
   return {

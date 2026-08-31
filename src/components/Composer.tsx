@@ -73,7 +73,6 @@ export function Composer({
     setSubmitting(true);
     setError(null);
     try {
-      // Upload the image first (if any), then create the post with its URL.
       let imageUrl: string | null = null;
       if (file && blobUploads) {
         // Straight from the browser to Blob — the file never passes through a

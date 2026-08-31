@@ -1,12 +1,11 @@
-// Seat-height fit estimate (ADR 0006) — plain functions, no Prisma/React.
+// Seat-height fit estimate. See ADR 0006.
 //
-// This is the COLD-START path: what to say about a bike that no rider has
-// reported on yet. Once a bike has three comparable reports the boundary is
-// read off those instead, and everything here stops being consulted. Treat the
-// thresholds below as scaffolding with a short life.
+// The COLD-START path only: once a bike has three rider reports the boundary is
+// read off those and nothing here is consulted, so the thresholds below are
+// scaffolding with a short life.
 //
-// Scored on ONE foot. Riders stop with one foot down and the other covering the
-// rear brake; both-feet-flat is a comfort bonus, not the threshold.
+// Scored on ONE foot — riders stop with one foot down and the other covering
+// the rear brake; both-feet-flat is a comfort bonus, not the threshold.
 
 import {
   SAG_DEFAULTS_MM,
@@ -24,9 +23,9 @@ export const FIT_BANDS = [
 
 export type FitBand = (typeof FIT_BANDS)[number]["key"];
 
-// Measured barefoot, so footwear is added here rather than baked into the
-// stored inseam. Counting it in both places is worth about an inch, which is
-// enough to turn a tiptoe verdict into a flat-foot one.
+// Inseams are stored barefoot, so footwear is added here and must NOT be baked
+// into the stored figure: counting it twice is worth about an inch, enough to
+// turn a tiptoe verdict into a flat-foot one.
 export const SOLE_MM: Record<"bare" | "sneakers" | "boots", number> = {
   bare: 0,
   sneakers: 20,
@@ -70,8 +69,8 @@ export function fitFor(
   const ratio = effectiveInseam / reach;
   const band = bandFor(ratio);
 
-  // A photo-derived inseam carries real error. If the band would change at
-  // either end of that error, we haven't earned a verdict.
+  // If the band would change at either end of the measurement's own error, we
+  // haven't earned a verdict.
   const borderline =
     spreadMm > 0 &&
     (bandFor((effectiveInseam - spreadMm) / reach) !== band ||
@@ -88,8 +87,7 @@ export function fitFor(
 }
 
 // --- unit helpers ----------------------------------------------------------
-// Canonical storage is whole millimetres. Riders quote inches in the US and
-// centimetres elsewhere, and seat heights get published both ways.
+// Canonical storage is whole millimetres; riders quote inches or centimetres.
 
 export const mmToInches = (mm: number) => mm / 25.4;
 export const inchesToMm = (inches: number) => Math.round(inches * 25.4);

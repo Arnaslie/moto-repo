@@ -44,14 +44,12 @@ export function WaveButton({
   }
 
   async function toggle() {
-    // One wave in flight at a time; the rest of the taps are the same wave.
     if (busy) return;
 
     const next = !waved;
     setBusy(true);
     setError(null);
 
-    // Optimistic: the hand flips now, the server catches up.
     setWaved(next);
     setCount((n) => n + (next ? 1 : -1));
     if (next) setCelebrating(true);

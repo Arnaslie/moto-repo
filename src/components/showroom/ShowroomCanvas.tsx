@@ -16,7 +16,6 @@ function colorForBike(seed: string): string {
   return `hsl(${hue}, 65%, 52%)`;
 }
 
-// The bike + platform slowly rotate together, convention-floor style.
 function Turntable({ color }: { color: string }) {
   const ref = useRef<Group>(null);
   useFrame((_, delta) => {
@@ -53,7 +52,6 @@ export default function ShowroomCanvas({ seed }: { seed: string }) {
       <color attach="background" args={["#0b0b0f"]} />
       <fog attach="fog" args={["#0b0b0f", 9, 20]} />
 
-      {/* showroom lighting */}
       <ambientLight intensity={0.35} />
       <spotLight
         position={[6, 9, 5]}

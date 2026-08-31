@@ -11,10 +11,8 @@ export const dynamic = "force-dynamic";
 export default async function RoomPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
-  // The door needs an account — signed out you can read the directory, but not
-  // hear anything. Bounce to login rather than 404ing, and carry the room along
-  // so signing in puts them *in* it. A room link shared into a group chat is
-  // how rooms fill; landing on the feed instead loses the room and the moment.
+  // Login rather than 404: a room link shared into a group chat is how rooms
+  // fill, so signing in has to land them in the room they followed.
   const user = await getCurrentUser();
   if (!user) redirect(`/login?next=${encodeURIComponent(`/comms/${id}`)}`);
 

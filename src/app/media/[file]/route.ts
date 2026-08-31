@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server";
 import { readUpload } from "@/lib/uploads";
 
-// GET /media/[file] — serve a user-uploaded image from the private uploads dir
-// at request time. Reliable in dev and `next start` (unlike static public/
-// serving, which only covers files present at build time).
+// Served at request time out of the private uploads dir: static public/ serving
+// only covers files present at build time, so runtime-written files need this.
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ file: string }> },

@@ -2,13 +2,12 @@ import type { PrismaClient } from "@prisma/client";
 // Relative import (not the "@/" alias) so `tsx prisma/*.ts` resolves it.
 import { STARTER_CATALOG } from "../src/lib/gear";
 
-// The gear catalog is reference data, not sample content: signup writes a
-// UserGear row for every STARTER_CATALOG entry, so a database without these
-// rows fails every signup with a foreign key violation. That's why this runs
-// as part of the deploy rather than only from the seed script.
+// Reference data, not sample content: signup writes a UserGear row for every
+// STARTER_CATALOG entry, so a database without these rows fails every signup
+// with a foreign key violation. Hence running on deploy, not just from the seed.
 //
-// Idempotent by design — upserts keyed on the stable slug id, so it's safe to
-// run on every deploy and it doubles as a way to push catalog edits live.
+// Must stay idempotent — it runs on every deploy. Upserts keyed on the stable
+// slug id, which also makes it the way to push catalog edits live.
 export async function seedGearCatalog(prisma: PrismaClient) {
   for (const item of STARTER_CATALOG) {
     const fields = {

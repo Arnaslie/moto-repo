@@ -6,11 +6,10 @@ import { CommentTicker } from "./CommentTicker";
 import { WaveButton } from "./WaveButton";
 import { ChatIcon } from "./icons";
 
-// Everything below a post's text: the action row, then the comment ticker.
-//
-// They're one component because they share two pieces of state — whether the
-// thread is open, and how many comments there are. The count lives up here so
-// that posting a comment in the thread moves the number in the action row.
+// The action row and the comment ticker are one component because they share two
+// pieces of state — whether the thread is open, and how many comments there are.
+// The count lives up here so that posting a comment in the thread moves the
+// number in the action row.
 export function PostFooter({
   post,
   currentUser,

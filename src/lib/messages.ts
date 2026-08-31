@@ -1,23 +1,15 @@
-// Direct messages — the rules and the shapes.
+// See ADR 0003. Keep this half free of React/Next/Prisma imports.
 //
-// The pure half: no React, no Next, no Prisma imports, so route handlers,
-// components and a future mobile client can all share it (same two-tier split
-// as comms.ts / rooms.ts).
-//
-// A DM is the app's first private channel. Everything else here — the feed,
-// Comms, the map — is a public space where the worst anyone can do is do it
-// where everyone can see. That's worth remembering when this grows: the
-// constraints below are about keeping a thread readable, not about safety.
+// A DM is the app's only private channel, and nothing below is a safety
+// control — the caps here are about keeping a thread readable.
 
 import { HANDLE_RE } from "./auth";
 import type { PostAuthorAvatar } from "./types";
 
 /**
- * Longer than a post's 500 and much longer than a comment's 280. Those two are
- * broadcast — they're read by people scrolling past, so brevity is a courtesy.
- * A DM is read by exactly one person who chose to be in the conversation, and
- * it's where the long answer to "why is it doing that?" ends up. The cap is
- * only here to stop a paste of the whole service manual.
+ * Longer than a post's 500 or a comment's 280: those are broadcast, a DM is read
+ * by one person who chose to be there. The cap only stops a paste of the whole
+ * service manual.
  */
 export const MAX_MESSAGE_LENGTH = 2000;
 
@@ -28,8 +20,7 @@ export function pairKey(a: string, b: string): string {
 }
 
 /** The other rider, as a thread needs to show them. Carries the avatar because
- *  an inbox is a list of *people* — in an app where every rider builds one,
- *  rows of bare handles are the one screen where nobody has a face. */
+ *  an inbox is a list of *people*, unlike a notification row. */
 export type Correspondent = {
   handle: string;
   displayName: string | null;
@@ -39,9 +30,9 @@ export type Correspondent = {
 export type MessageDTO = {
   id: string;
   body: string;
-  /** Handle of whoever sent it. The client compares it against its own rather
-   *  than the server marking each line "mine" — the same payload then serves
-   *  both sides of the thread. */
+  /** Handle of whoever sent it. The client compares it against its own, so the
+   *  same payload serves both sides of the thread — don't mark lines "mine"
+   *  server-side. */
   sender: string;
   createdAt: string;
 };
@@ -63,9 +54,8 @@ export type StartConversationInput = { handle: string };
 type Parsed<T> = { ok: true; value: T } | { ok: false; error: string };
 
 /**
- * A message is one field, so this is mostly about what counts as empty. Inner
- * whitespace is left alone — unlike a room title, which gets collapsed: a DM is
- * where someone pastes a torque sequence, and the line breaks are the content.
+ * Inner whitespace is left alone — unlike a room title, which gets collapsed. A
+ * DM is where someone pastes a torque sequence, and the line breaks are content.
  */
 export function parseMessageInput(body: unknown): Parsed<MessageInput> {
   if (typeof body !== "object" || body === null) {
@@ -87,10 +77,9 @@ export function parseMessageInput(body: unknown): Parsed<MessageInput> {
 }
 
 /**
- * Starting a thread names the other rider by handle, not by id — the handle is
- * what a rider actually knows about someone, and it's what the profile link
- * already carries. Validated against the same pattern signup enforces, so a
- * malformed handle is a 400 here rather than a pointless lookup.
+ * Threads are started by handle, not id — that's what a profile link carries.
+ * Validated against the same pattern signup enforces, so a malformed handle is
+ * a 400 rather than a lookup.
  */
 export function parseStartConversationInput(
   body: unknown,

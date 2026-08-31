@@ -6,15 +6,6 @@ import { Avatar } from "@/components/Avatar";
 import type { ConversationSummary } from "@/lib/messages";
 import { timeAgo } from "@/lib/format";
 
-/* ---------------------------------------------------------------------------
-   The inbox.
-
-   A list of people, not of subjects — which is the whole difference between
-   this and the Comms directory next door. A room advertises itself with its
-   title and anyone can walk in; a thread is already yours, so the rider is the
-   biggest thing on the row and the last line said is the caption under it.
---------------------------------------------------------------------------- */
-
 // Threads move on the scale of a conversation, not of a room filling up, so
 // this is the same slow tick the directory uses. The thread page itself polls
 // harder — that's where you're actually waiting on a reply.
@@ -80,9 +71,6 @@ export function Inbox({
   );
 }
 
-/* An empty inbox is the normal state, not a failure — most riders will never
-   have written to anyone. So it says where threads come from rather than
-   apologising, and points at the one screen that lists people. */
 function EmptyInbox() {
   return (
     <div className="px-6 py-14 text-center">
@@ -133,9 +121,6 @@ function ConversationRow({
             {timeAgo(conversation.lastMessageAt)}
           </span>
         </div>
-        {/* The preview is the last line either of you said, prefixed when it
-            was yours — so a thread you're waiting on a reply to reads as such
-            without opening it. */}
         <p
           className={`truncate text-sm ${
             unread ? "text-black/80 dark:text-white/80" : "text-black/50 dark:text-white/50"

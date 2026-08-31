@@ -3,15 +3,9 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/session";
 import { parseInseamInput, type Inseam } from "@/lib/inseam";
 
-/**
- * The rider's own inseam. Every handler here is scoped to the session user and
- * there is no route that reads someone else's — inseam is body data with no
- * permission layer yet (ADR 0006), so the only safe visibility is "yours".
- *
- * That's also why there's no GET-by-handle sibling: the absence is the design.
- */
-
-// POST /api/fit/inseam — set or replace your own inseam.
+// Every handler here is scoped to the session user. Inseam is body data with no
+// permission layer yet (ADR 0006), so the only safe visibility is "yours" — the
+// missing GET-by-handle sibling is deliberate.
 export async function POST(request: Request) {
   const user = await getCurrentUser();
   if (!user) {
@@ -39,8 +33,6 @@ export async function POST(request: Request) {
   return NextResponse.json({ inseam: updated as Inseam });
 }
 
-// DELETE /api/fit/inseam — forget it. Body data should be removable in one
-// click, without deleting the account it hangs off.
 export async function DELETE() {
   const user = await getCurrentUser();
   if (!user) {

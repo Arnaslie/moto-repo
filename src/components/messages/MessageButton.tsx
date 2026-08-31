@@ -4,14 +4,6 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 /**
- * The way into a thread, on someone's profile.
- *
- * There's no "new message" screen anywhere in the app, and deliberately so: a
- * DM here starts from a *rider* — someone whose bike you just looked at — not
- * from a compose box asking who you'd like to write to. That's also why this
- * doesn't ask for a first line. It opens the thread and lands you in it, empty,
- * which is the same place you'd be if they'd written to you first.
- *
  * Starting a thread is idempotent server-side, so pressing this on a profile
  * you've already written to walks you back into the conversation you have
  * rather than making a second one.

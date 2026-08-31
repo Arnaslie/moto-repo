@@ -2,20 +2,13 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/session";
 
-// GET /api/messages/unread — what the header badge polls.
+// The header badge polls this on a timer in every open tab, so keep it to reads
+// against Participant — no join to Message, no conversation bodies.
 //
-// Deliberately the cheapest thing in the app: two small reads against
-// Participant, no join to Message, no conversation bodies. It runs on a timer
-// in every open tab, so its cost is the one that multiplies.
+// `unread` counts *conversations*, not messages: a badge reading "40" for forty
+// messages from one rider says something untrue about how much is waiting.
 //
-// `unread` counts *conversations*, not messages. Forty messages from one rider
-// is one conversation waiting for you, and a badge reading "40" says something
-// untrue about how much there is to deal with. The per-conversation counts ride
-// along so the inbox can show them without a second call.
-//
-// The payload matches the `snapshot` event ADR 0001 specifies for the SSE
-// stream — same field names, same shape. When the stream lands, this becomes
-// the fallback rather than something to rewrite.
+// Payload shape follows ADR 0001's `snapshot` event; see also ADR 0007.
 export async function GET() {
   const user = await getCurrentUser();
   if (!user) {

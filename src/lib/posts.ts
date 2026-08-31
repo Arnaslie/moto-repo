@@ -42,13 +42,11 @@ function viewerWaveFilter(viewer?: WaveViewer | null) {
   return { id: "" };
 }
 
-// Prisma `include` for loading a post together with its author's equipped gear,
-// its newest comments, and its wave tally. Shared so every query that feeds
-// serializePost() selects the same shape.
+// Shared so every query that feeds serializePost() selects the same shape.
 //
-// Unlike the other includes here this one is viewer-specific: whether a post is
-// already waved at depends on who's asking, so callers pass what getWaveViewer()
-// hands them (or nothing, for readers with neither an account nor a guest id).
+// Viewer-specific, unlike the other includes here: whether a post is already
+// waved at depends on who's asking, so callers pass what getWaveViewer() hands
+// them (or nothing, for readers with neither an account nor a guest id).
 export function postInclude(viewer?: WaveViewer | null) {
   return {
     user: { select: authorSelect },
@@ -60,9 +58,9 @@ export function postInclude(viewer?: WaveViewer | null) {
       orderBy: { createdAt: "desc" },
       select: commentSelect,
     },
-    // The viewer's own wave, if they've left one — at most a single row, given
-    // the unique pairs on Wave. A reader with no identity at all gets a filter
-    // that can never match, which keeps this one query shape instead of two.
+    // At most one row, given the unique pairs on Wave. A reader with no
+    // identity gets a filter that can never match, which keeps this one query
+    // shape instead of two.
     waves: {
       where: viewerWaveFilter(viewer),
       select: { id: true },
@@ -71,8 +69,7 @@ export function postInclude(viewer?: WaveViewer | null) {
   } as const;
 }
 
-// The subset of a row that the serializers need. Kept as structural types so
-// callers can pass Prisma results directly.
+// Structural, so callers can pass Prisma results directly.
 type AuthorRow = {
   avatarSkin: string;
   gear: { gearItem: { slot: string; asset: string; color: string | null } }[];

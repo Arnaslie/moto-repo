@@ -4,10 +4,9 @@ import { useMemo } from "react";
 import { Edges } from "@react-three/drei";
 import * as THREE from "three";
 
-// Placeholder stand-in for a real bike model. Swap this out later for a loaded
-// asset, e.g. `const { scene } = useGLTF("/models/bike.glb")` then
-// `<primitive object={scene} />` — the surrounding scene, lighting, turntable,
-// and per-bike tint all stay the same.
+// A placeholder, not a bike: this is a box on a plinth until a real asset is
+// loaded here. The surrounding scene, lighting, turntable and per-bike tint all
+// stay the same when it is.
 export function BikeModel({ bodyColor }: { bodyColor: string }) {
   const material = useMemo(
     () =>
@@ -23,7 +22,6 @@ export function BikeModel({ bodyColor }: { bodyColor: string }) {
 
   return (
     <group position={[0, 1.05, 0]}>
-      {/* the model slot: a clean display block with highlighted edges */}
       <mesh material={material} castShadow>
         <boxGeometry args={[1.8, 1.3, 0.9]} />
         <Edges scale={1} threshold={15} color="#ffffff" />
