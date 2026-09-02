@@ -84,6 +84,24 @@ export type NotificationDTO = {
 };
 
 /**
+ * The client's copy of the rows, with the ones just marked read stamped. No
+ * `ids` means all of them, matching the read route's body.
+ *
+ * `readAt` is set once and never unset — the same invariant the route enforces
+ * against the database, applied to the copy the panel is holding, so a row that
+ * was already read keeps the time it had rather than jumping to now. `at` is a
+ * parameter so this stays a pure transform rather than reading a clock.
+ */
+export function markNotificationsRead(
+  list: NotificationDTO[],
+  ids?: string[],
+  at: string = new Date().toISOString(),
+): NotificationDTO[] {
+  const only = ids ? new Set(ids) : null;
+  return list.map((n) => (n.readAt || (only && !only.has(n.id)) ? n : { ...n, readAt: at }));
+}
+
+/**
  * Parts rather than one finished string: the handle is a profile link inside a
  * row that is itself a link, so the component must render them separately.
  * `did` is written to follow the handle directly.

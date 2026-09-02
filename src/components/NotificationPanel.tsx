@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import type { ConversationSummary } from "@/lib/messages";
 import {
+  markNotificationsRead,
   notificationHref,
   notificationLine,
   notificationSentence,
@@ -116,11 +117,18 @@ export function NotificationPanel({
 
   async function markRead(ids?: string[]) {
     try {
-      await fetch("/api/notifications/read", {
+      const res = await fetch("/api/notifications/read", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify(ids ? { ids } : {}),
       });
+      // Only once the server has agreed. Stamping rows on a failed POST would
+      // clear the dots and tell the reader something was read that wasn't.
+      if (!res.ok) return;
+      // The rows the panel is holding carry the readAt they were fetched with,
+      // so without this the dots, the "Unread." in each label and the mark-all
+      // button all stay as they were until the panel is reopened.
+      setNotifications((prev) => (prev ? markNotificationsRead(prev, ids) : prev));
       onRead();
     } catch {
       /* the next tick corrects the count */
