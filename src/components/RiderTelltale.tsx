@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { WheelIcon } from "@/components/icons";
 import { NotificationPanel } from "@/components/NotificationPanel";
 import { waitingSentence, waitingTotal, type Waiting } from "@/lib/notifications";
@@ -70,12 +70,28 @@ export function RiderTelltale({
     lastSeen?.handle === handle ? lastSeen.waiting : initial,
   );
   const [open, setOpen] = useState(false);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+
+  // One detent per rise in the count, counted rather than flagged: the span is
+  // remounted on the new value, because a CSS animation on a node that is
+  // already there won't replay.
+  const [detents, setDetents] = useState(0);
+  const seenTotal = useRef(waitingTotal(waiting));
+
+  const apply = useCallback((next: Waiting) => {
+    setWaiting(next);
+    // The wheel indexes when the number goes up, whichever half moved. A second
+    // message in a conversation already waiting doesn't move it and shouldn't:
+    // the badge doesn't move either, so there is nothing to point at.
+    if (waitingTotal(next) > seenTotal.current) setDetents((d) => d + 1);
+    seenTotal.current = waitingTotal(next);
+  }, []);
 
   useEffect(() => {
     let active = true;
     async function tick() {
       const next = await fetchWaiting(handle);
-      if (next && active) setWaiting(next);
+      if (next && active) apply(next);
     }
     tick();
     const id = setInterval(tick, POLL_MS);
@@ -83,20 +99,40 @@ export function RiderTelltale({
       active = false;
       clearInterval(id);
     };
-  }, [handle]);
+  }, [handle, apply]);
+
+  // Escape lives here rather than in the panel because the wheel is where focus
+  // goes back to, and this is what holds the ref. Outside-click stays in the
+  // panel, which is the thing that knows what counts as outside.
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setOpen(false);
+        buttonRef.current?.focus();
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open]);
 
   // Lets the panel drop the count the moment it marks something read, instead
   // of the wheel staying lit until the next 20s tick.
   const refresh = useCallback(async () => {
     const next = await fetchWaiting(handle);
-    if (next) setWaiting(next);
-  }, [handle]);
+    if (next) apply(next);
+  }, [handle, apply]);
+
+  // Stable, so the panel's outside-click listener isn't torn down and rebuilt
+  // on every tick.
+  const close = useCallback(() => setOpen(false), []);
 
   const total = waitingTotal(waiting);
 
   return (
     <div className="relative">
       <button
+        ref={buttonRef}
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-label="Notifications"
@@ -107,7 +143,9 @@ export function RiderTelltale({
         // stripe is, and the stripe is the signal.
         className="flex items-center gap-1.5 font-medium text-black/70 transition-colors hover:text-orange-500 dark:text-white/70"
       >
-        <WheelIcon lit={total > 0} size={24} />
+        <span key={detents} className={detents > 0 ? "wheel-detent" : undefined}>
+          <WheelIcon lit={total > 0} size={24} />
+        </span>
         {total > 0 && (
           <span className="text-sm font-semibold tabular-nums text-orange-500">{total}</span>
         )}
@@ -119,7 +157,7 @@ export function RiderTelltale({
       {open && (
         <NotificationPanel
           handle={handle}
-          onClose={() => setOpen(false)}
+          onClose={close}
           onRead={refresh}
         />
       )}

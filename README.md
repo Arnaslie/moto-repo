@@ -41,6 +41,13 @@ styled with Tailwind CSS.
   that's what the wheel in the header counts. Sending is optimistic; new messages arrive on a
   3-second poll (see [docs/adr/0003](./docs/adr/0003-direct-messages-polled.md) for why
   that isn't a socket, and what would replace it).
+- **Notifications** — waves and comments on your posts tell you they happened, instead of
+  being something you find by scrolling back. The wheel counts them alongside unread
+  conversations and opens a panel holding both, newest first; there's no separate page. They
+  ride the 20-second poll the badge already ran rather than a stream, so a wave can be a tick
+  late — deliberately, see [docs/adr/0007](./docs/adr/0007-notifications-polled.md). Both
+  ends are accounts: an anonymous wave still lands and still counts, it just notifies nobody.
+  One wave notification per rider per post, ever, so un-waving and re-waving doesn't nag.
 - **Image uploads** — straight from the browser to Vercel Blob in production, to a private
   local directory in dev (see [Uploads](#uploads) below).
 
@@ -135,7 +142,9 @@ src/
         [id]/                    # GET the thread (?after= for the poll)
         [id]/messages/           # POST a message
         [id]/read/               # POST to clear your unread count
-      messages/unread/           # GET what the header wheel polls
+      unread/                    # GET what the header wheel polls: mail + activity
+      notifications/             # GET the panel's page (?before= cursor)
+        read/                    # POST to mark rows read — ids, or all of them
   components/
     Feed.tsx · Composer.tsx · PostCard.tsx
     PostFooter.tsx                        # action row + ticker (shared state)
@@ -147,6 +156,8 @@ src/
     Garage.tsx · showroom/                # bikes + three.js canvas
     RiderMap.tsx · RidersView.tsx         # Leaflet (dynamic import, no SSR)
     AuthForm.tsx · SiteHeader.tsx
+    RiderTelltale.tsx                     # the header wheel: counts, and the detent
+    NotificationPanel.tsx                 # the dropdown under it
     messages/                             # Inbox, Thread, the profile button,
                                           #   and the header's unread link
   lib/

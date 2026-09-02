@@ -7,6 +7,7 @@ import type { ConversationSummary } from "@/lib/messages";
 import {
   notificationHref,
   notificationLine,
+  notificationSentence,
   type NotificationDTO,
 } from "@/lib/notifications";
 
@@ -69,19 +70,17 @@ export function NotificationPanel({
 
   // Same discipline the drivetrain uses, so the two don't fight: it closes on
   // any pointerdown outside its own panel, and this closes on any outside its.
+  // Opening this one is a pointerdown outside that one, so the drivetrain shuts
+  // on its own — nothing here has to reach across and close it.
+  //
+  // Escape is the wheel's, not this component's: it holds the button focus
+  // returns to.
   useEffect(() => {
     const onDown = (e: PointerEvent) => {
       if (!ref.current?.contains(e.target as Node)) onClose();
     };
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
     document.addEventListener("pointerdown", onDown);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("pointerdown", onDown);
-      document.removeEventListener("keydown", onKey);
-    };
+    return () => document.removeEventListener("pointerdown", onDown);
   }, [onClose]);
 
   async function markRead(ids?: string[]) {
@@ -109,6 +108,7 @@ export function NotificationPanel({
   return (
     <div
       ref={ref}
+      role="dialog"
       aria-label="Notifications"
       // Above the sticky header's own z-[1000], or it renders behind the page
       // it is anchored to.
@@ -127,53 +127,61 @@ export function NotificationPanel({
             </p>
           </div>
         ) : (
-          rows.map((row) =>
-            row.kind === "activity" ? (
-              <button
-                key={row.n.id}
-                type="button"
-                onClick={() => openActivity(row.n)}
-                className={rowClass}
-              >
-                <span
-                  aria-hidden
-                  className={`mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full ${
-                    row.n.readAt ? "bg-transparent" : "bg-orange-500"
-                  }`}
-                />
-                <span className="min-w-0">
-                  <span className="font-medium">@{row.n.actor}</span>{" "}
-                  {notificationLine(row.n).did}
-                  {row.n.quote && (
-                    <span className="block truncate text-black/50 dark:text-white/50">
-                      {row.n.quote}
+          <ul>
+            {rows.map((row) =>
+              row.kind === "activity" ? (
+                <li key={`a:${row.n.id}`}>
+                  <button
+                    type="button"
+                    onClick={() => openActivity(row.n)}
+                    // The row's text is assembled from parts so the handle can
+                    // be weighted; the label is the same row as one sentence.
+                    aria-label={`${row.n.readAt ? "" : "Unread. "}${notificationSentence(row.n)}`}
+                    className={rowClass}
+                  >
+                    <span
+                      aria-hidden
+                      className={`mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full ${
+                        row.n.readAt ? "bg-transparent" : "bg-orange-500"
+                      }`}
+                    />
+                    <span className="min-w-0">
+                      <span className="font-medium">@{row.n.actor}</span>{" "}
+                      {notificationLine(row.n).did}
+                      {row.n.quote && (
+                        <span className="block truncate text-black/50 dark:text-white/50">
+                          {row.n.quote}
+                        </span>
+                      )}
                     </span>
-                  )}
-                </span>
-              </button>
-            ) : (
-              <Link
-                key={row.c.id}
-                href={`/messages/${row.c.id}`}
-                onClick={onClose}
-                className={rowClass}
-              >
-                <span
-                  aria-hidden
-                  className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-orange-500"
-                />
-                <span className="min-w-0">
-                  <span className="font-medium">@{row.c.with.handle}</span>{" "}
-                  sent {row.c.unreadCount === 1 ? "a message" : `${row.c.unreadCount} messages`}
-                  {row.c.lastMessage && (
-                    <span className="block truncate text-black/50 dark:text-white/50">
-                      {row.c.lastMessage.body}
+                  </button>
+                </li>
+              ) : (
+                <li key={`m:${row.c.id}`}>
+                  <Link
+                    href={`/messages/${row.c.id}`}
+                    onClick={onClose}
+                    className={rowClass}
+                  >
+                    <span
+                      aria-hidden
+                      className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-orange-500"
+                    />
+                    <span className="min-w-0">
+                      <span className="font-medium">@{row.c.with.handle}</span>{" "}
+                      sent{" "}
+                      {row.c.unreadCount === 1 ? "a message" : `${row.c.unreadCount} messages`}
+                      {row.c.lastMessage && (
+                        <span className="block truncate text-black/50 dark:text-white/50">
+                          {row.c.lastMessage.body}
+                        </span>
+                      )}
                     </span>
-                  )}
-                </span>
-              </Link>
-            ),
-          )
+                  </Link>
+                </li>
+              ),
+            )}
+          </ul>
         )}
       </div>
 

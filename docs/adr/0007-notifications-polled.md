@@ -1,6 +1,6 @@
 # ADR 0007 — Notifications, polled
 
-- **Status:** Accepted, not yet implemented
+- **Status:** Implemented
 - **Date:** 2026-08-29
 - **Supersedes / superseded by:** supersedes [0001](./0001-app-wide-notifications.md)'s
   delivery mechanism and its tell-tale wiring; completes 0001's data model minus
