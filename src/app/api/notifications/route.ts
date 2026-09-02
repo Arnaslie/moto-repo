@@ -48,7 +48,9 @@ function serialize(row: Row): NotificationDTO | null {
 }
 
 // GET /api/notifications — newest first; ?before=<ISO> pages down the
-// (recipientId, createdAt) index.
+// (recipientId, createdAt) index. Answers with the cursor for the next page, or
+// null at the end: the caller can't work that out from a short page without
+// knowing PAGE_SIZE, which is ours and not theirs.
 export async function GET(request: NextRequest) {
   const user = await getCurrentUser();
   if (!user) {
@@ -68,14 +70,24 @@ export async function GET(request: NextRequest) {
   // Exclusive (lt), unlike the thread's inclusive cursor: that one can't afford
   // to drop a message, this one can't afford to repeat a row already scrolled
   // past. A millisecond tie costs a skipped panel row, not a lost message.
+  //
+  // Taken one past the page, so "is there more" costs a row rather than a round trip
+  // that comes back empty.
   const rows = await prisma.notification.findMany({
     where: { recipientId: user.id, ...(before ? { createdAt: { lt: before } } : {}) },
     orderBy: { createdAt: "desc" },
-    take: PAGE_SIZE,
+    take: PAGE_SIZE + 1,
     select: notificationSelect,
   });
 
+  const hasMore = rows.length > PAGE_SIZE;
+  const page = hasMore ? rows.slice(0, PAGE_SIZE) : rows;
+
   return NextResponse.json({
-    notifications: rows.map(serialize).filter((n): n is NotificationDTO => n !== null),
+    notifications: page.map(serialize).filter((n): n is NotificationDTO => n !== null),
+    // Off the last raw row, not the last serialized one: a page whose rows this
+    // build can't render still has to hand back a cursor past them, or paging
+    // stops dead on a row it merely skipped.
+    nextCursor: hasMore ? page[page.length - 1].createdAt.toISOString() : null,
   });
 }

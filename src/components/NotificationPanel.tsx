@@ -47,7 +47,14 @@ export function NotificationPanel({
   onRead: () => void;
 }) {
   const router = useRouter();
-  const [rows, setRows] = useState<Row[] | null>(null);
+  // Held apart rather than merged once, because only the activity half pages:
+  // mail is every unread conversation and arrives whole.
+  const [notifications, setNotifications] = useState<NotificationDTO[] | null>(null);
+  const [conversations, setConversations] = useState<ConversationSummary[]>([]);
+  // Null once there is nothing older. The route says so rather than the panel
+  // guessing from a short page, which would mean knowing the server's page size.
+  const [cursor, setCursor] = useState<string | null>(null);
+  const [paging, setPaging] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -55,18 +62,42 @@ export function NotificationPanel({
     (async () => {
       try {
         const [a, m] = await Promise.all([
-          fetch("/api/notifications").then((r) => (r.ok ? r.json() : { notifications: [] })),
+          fetch("/api/notifications").then((r) =>
+            r.ok ? r.json() : { notifications: [], nextCursor: null },
+          ),
           fetch("/api/messages/conversations").then((r) => (r.ok ? r.json() : { conversations: [] })),
         ]);
-        if (active) setRows(rowsFrom(a.notifications ?? [], m.conversations ?? []));
+        if (!active) return;
+        setNotifications(a.notifications ?? []);
+        setCursor(a.nextCursor ?? null);
+        setConversations(m.conversations ?? []);
       } catch {
-        if (active) setRows([]);
+        if (active) setNotifications([]);
       }
     })();
     return () => {
       active = false;
     };
   }, []);
+
+  async function loadMore() {
+    if (!cursor || paging) return;
+    setPaging(true);
+    try {
+      const res = await fetch(`/api/notifications?before=${encodeURIComponent(cursor)}`);
+      if (res.ok) {
+        const data = await res.json();
+        setNotifications((prev) => [...(prev ?? []), ...(data.notifications ?? [])]);
+        setCursor(data.nextCursor ?? null);
+      }
+    } catch {
+      // The cursor is untouched, so the button is still there to try again.
+    } finally {
+      setPaging(false);
+    }
+  }
+
+  const rows = notifications === null ? null : rowsFrom(notifications, conversations);
 
   // Same discipline the drivetrain uses, so the two don't fight: it closes on
   // any pointerdown outside its own panel, and this closes on any outside its.
@@ -127,61 +158,73 @@ export function NotificationPanel({
             </p>
           </div>
         ) : (
-          <ul>
-            {rows.map((row) =>
-              row.kind === "activity" ? (
-                <li key={`a:${row.n.id}`}>
-                  <button
-                    type="button"
-                    onClick={() => openActivity(row.n)}
-                    // The row's text is assembled from parts so the handle can
-                    // be weighted; the label is the same row as one sentence.
-                    aria-label={`${row.n.readAt ? "" : "Unread. "}${notificationSentence(row.n)}`}
-                    className={rowClass}
-                  >
-                    <span
-                      aria-hidden
-                      className={`mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full ${
-                        row.n.readAt ? "bg-transparent" : "bg-orange-500"
-                      }`}
-                    />
-                    <span className="min-w-0">
-                      <span className="font-medium">@{row.n.actor}</span>{" "}
-                      {notificationLine(row.n).did}
-                      {row.n.quote && (
-                        <span className="block truncate text-black/50 dark:text-white/50">
-                          {row.n.quote}
-                        </span>
-                      )}
-                    </span>
-                  </button>
-                </li>
-              ) : (
-                <li key={`m:${row.c.id}`}>
-                  <Link
-                    href={`/messages/${row.c.id}`}
-                    onClick={onClose}
-                    className={rowClass}
-                  >
-                    <span
-                      aria-hidden
-                      className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-orange-500"
-                    />
-                    <span className="min-w-0">
-                      <span className="font-medium">@{row.c.with.handle}</span>{" "}
-                      sent{" "}
-                      {row.c.unreadCount === 1 ? "a message" : `${row.c.unreadCount} messages`}
-                      {row.c.lastMessage && (
-                        <span className="block truncate text-black/50 dark:text-white/50">
-                          {row.c.lastMessage.body}
-                        </span>
-                      )}
-                    </span>
-                  </Link>
-                </li>
-              ),
+          <>
+            <ul>
+              {rows.map((row) =>
+                row.kind === "activity" ? (
+                  <li key={`a:${row.n.id}`}>
+                    <button
+                      type="button"
+                      onClick={() => openActivity(row.n)}
+                      // The row's text is assembled from parts so the handle can
+                      // be weighted; the label is the same row as one sentence.
+                      aria-label={`${row.n.readAt ? "" : "Unread. "}${notificationSentence(row.n)}`}
+                      className={rowClass}
+                    >
+                      <span
+                        aria-hidden
+                        className={`mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full ${
+                          row.n.readAt ? "bg-transparent" : "bg-orange-500"
+                        }`}
+                      />
+                      <span className="min-w-0">
+                        <span className="font-medium">@{row.n.actor}</span>{" "}
+                        {notificationLine(row.n).did}
+                        {row.n.quote && (
+                          <span className="block truncate text-black/50 dark:text-white/50">
+                            {row.n.quote}
+                          </span>
+                        )}
+                      </span>
+                    </button>
+                  </li>
+                ) : (
+                  <li key={`m:${row.c.id}`}>
+                    <Link
+                      href={`/messages/${row.c.id}`}
+                      onClick={onClose}
+                      className={rowClass}
+                    >
+                      <span
+                        aria-hidden
+                        className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-orange-500"
+                      />
+                      <span className="min-w-0">
+                        <span className="font-medium">@{row.c.with.handle}</span>{" "}
+                        sent{" "}
+                        {row.c.unreadCount === 1 ? "a message" : `${row.c.unreadCount} messages`}
+                        {row.c.lastMessage && (
+                          <span className="block truncate text-black/50 dark:text-white/50">
+                            {row.c.lastMessage.body}
+                          </span>
+                        )}
+                      </span>
+                    </Link>
+                  </li>
+                ),
+              )}
+            </ul>
+            {cursor && (
+              <button
+                type="button"
+                onClick={loadMore}
+                disabled={paging}
+                className="w-full border-t border-black/5 px-3 py-2 text-left text-sm text-black/50 transition-colors hover:text-orange-500 disabled:opacity-50 dark:border-white/10 dark:text-white/50"
+              >
+                {paging ? "Loading…" : "Older"}
+              </button>
             )}
-          </ul>
+          </>
         )}
       </div>
 
