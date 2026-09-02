@@ -48,7 +48,12 @@ export function PostCard({
   );
 
   return (
-    <article className="border-b border-black/10 dark:border-white/10">
+    // The anchor a notification links to: there is no post permalink, so a row
+    // in the panel points at the owner's profile plus this id.
+    <article
+      id={`post-${post.id}`}
+      className="scroll-mt-32 border-b border-black/10 dark:border-white/10"
+    >
       <div className="flex gap-3 px-4 pb-3 pt-4">
         {profileHref ? (
           <Link href={profileHref} aria-label={`@${post.author}'s profile`}>

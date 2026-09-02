@@ -6,19 +6,15 @@ import {
   getGuestWaverId,
 } from "@/lib/session";
 import { ANONYMOUS_WAVES_ENABLED } from "@/lib/waves";
+import { emitWave } from "@/lib/notify";
 
-// Both handlers answer with the same shape so the client never has to guess at
-// the result of its own optimistic update — it just adopts what came back.
 async function waveState(postId: string, waved: boolean) {
   const waveCount = await prisma.wave.count({ where: { postId } });
   return NextResponse.json({ waveCount, waved });
 }
 
-// Shared guard: waving needs a post that still exists, plus someone to pin the
-// wave on. Normally that's an account; while ANONYMOUS_WAVES_ENABLED is on it
-// can instead be the guest id from the visitor's cookie. `mint` says whether
-// we're allowed to hand out a new one — true when they're waving, false when
-// they're taking one back (no cookie means there was nothing to take back).
+// `mint` is true when waving (a guest may be handed a new id) and false when
+// taking one back — no cookie then means there was nothing to take back.
 async function resolve(postId: string, mint: boolean) {
   const user = await getCurrentUser();
 
@@ -35,49 +31,60 @@ async function resolve(postId: string, mint: boolean) {
     guestId = mint ? await ensureGuestWaverId() : await getGuestWaverId();
   }
 
+  // `userId` is the post's *author*, not the waver — it's who gets told. Null
+  // on a seeded or anonymous post, which is a post with nobody to tell.
   const post = await prisma.post.findUnique({
     where: { id: postId },
-    select: { id: true },
+    select: { id: true, userId: true },
   });
   if (!post) {
     return { error: NextResponse.json({ error: "Post not found." }, { status: 404 }) };
   }
 
-  return { userId: user?.id ?? null, guestId };
+  return { userId: user?.id ?? null, guestId, postAuthorId: post.userId };
 }
 
-// POST /api/posts/[id]/waves — wave at a post. Idempotent: waving twice leaves
-// the single row from the first wave in place rather than erroring, so a double
-// tap or a retried request can't inflate the count.
+// Don't "simplify" the createMany back to an upsert: an upsert with
+// `update: {}` succeeds identically whether it inserted or found a row, so the
+// route could no longer tell a new wave from a repeat tap, and `count` below is
+// the difference between telling someone once and telling them every tap.
 export async function POST(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  const { error, userId, guestId } = await resolve(id, true);
+  const { error, userId, guestId, postAuthorId } = await resolve(id, true);
   if (error) return error;
 
-  // One branch per identity: each has its own unique pair, and Prisma wants the
-  // matching compound key by name.
+  // skipDuplicates leans on the per-identity unique pair in the schema; without
+  // that constraint these inserts are not idempotent.
   if (userId) {
-    await prisma.wave.upsert({
-      where: { postId_userId: { postId: id, userId } },
-      create: { postId: id, userId },
-      update: {},
+    // The emit is inside the transaction: a wave that rings nobody is invisible,
+    // so both land or neither does.
+    await prisma.$transaction(async (tx) => {
+      const { count } = await tx.wave.createMany({
+        data: [{ postId: id, userId }],
+        skipDuplicates: true,
+      });
+      // count === 0 is a repeat tap on a wave that's already standing. Note
+      // this is NOT the whole guard: un-waving deletes the row, so a re-wave
+      // gets count === 1 again. emitWave carries the rule that survives that.
+      if (count === 1) {
+        await emitWave(tx, { postId: id, postAuthorId, actorId: userId });
+      }
     });
   } else if (guestId) {
-    await prisma.wave.upsert({
-      where: { postId_guestId: { postId: id, guestId } },
-      create: { postId: id, guestId },
-      update: {},
+    // No emit, so no transaction: both ends of a notification are accounts and a
+    // guest wave has none.
+    await prisma.wave.createMany({
+      data: [{ postId: id, guestId }],
+      skipDuplicates: true,
     });
   }
 
   return waveState(id, true);
 }
 
-// DELETE /api/posts/[id]/waves — take the wave back. Also idempotent:
-// deleteMany simply matches nothing if it was already withdrawn.
 export async function DELETE(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -86,6 +93,9 @@ export async function DELETE(
   const { error, userId, guestId } = await resolve(id, false);
   if (error) return error;
 
+  // The notification deliberately stays: deleting it would let a rider withdraw
+  // a wave from someone's panel before they'd read it, and it is what keeps the
+  // un-wave/re-wave cycle silent — emitWave finds the old row and says nothing.
   if (userId) {
     await prisma.wave.deleteMany({ where: { postId: id, userId } });
   } else if (guestId) {

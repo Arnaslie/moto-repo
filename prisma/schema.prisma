@@ -1,18 +1,13 @@
-// Prisma schema for moto-repo — a social platform for motorcycle enthusiasts.
-// Docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
   provider  = "postgresql"
-  // Queries go through Neon's pooler: serverless opens a connection per
-  // invocation and would otherwise exhaust the server's limit.
+  // Queries go through Neon's pooler; migrations can't (a transaction-mode
+  // pooler can't carry DDL and advisory locks) and need the direct endpoint.
+  // Same database. Both URLs are injected by the Neon integration.
   url       = env("DATABASE_URL")
-  // Migrations don't. They issue DDL and advisory locks that a transaction-mode
-  // pooler can't carry, so they need the direct endpoint — same database, no
-  // pgbouncer in front. Both are injected by the Neon integration.
   directUrl = env("DATABASE_URL_UNPOOLED")
 }
 
@@ -22,33 +17,30 @@ model Post {
   content   String
   createdAt DateTime @default(now())
 
-  // Optional attached image, stored as a local path under /uploads (the bytes
-  // live on disk in public/uploads, not in the DB).
+  // Local path under /uploads; the bytes live on disk in public/uploads.
   imageUrl String?
 
-  // Optional link to a real account. Kept nullable + `author` denormalized so
-  // legacy/seeded posts (and anonymous posts) still render.
+  // Nullable, with `author` denormalized alongside it, so legacy/seeded and
+  // anonymous posts still render.
   userId String?
   user   User?   @relation(fields: [userId], references: [id])
 
-  comments Comment[]
-  waves    Wave[]
+  comments      Comment[]
+  waves         Wave[]
+  notifications Notification[]
 
   @@index([createdAt])
 }
 
-// A rider's wave on a post — this app's "like". Named after the two-finger
-// salute riders give each other on the road. One row per waver per post; the
-// unique pairs below are what make waving idempotent, so a double tap or an
-// offline retry can't inflate the count.
+// A rider's wave on a post — this app's "like". The unique pairs below are what
+// make waving idempotent, so a double tap or an offline retry can't inflate the
+// count.
 //
 // Exactly one of `userId` / `guestId` is set. `guestId` exists only for the
 // anonymous-waves toggle (NEXT_PUBLIC_ALLOW_ANONYMOUS_WAVES): a signed-out
-// visitor is identified by a random id in a cookie, so their wave persists and
-// can be taken back, but it isn't tied to any account. Both columns are
-// nullable because a unique index treats NULLs as distinct — that's what lets
-// many signed-in rows share `guestId = NULL` and vice versa. (True of Postgres
-// as it was of SQLite: NULLS DISTINCT is the default.)
+// visitor is identified by a random id in a cookie. Both columns are nullable
+// because a unique index treats NULLs as distinct — that's what lets many
+// signed-in rows share `guestId = NULL` and vice versa.
 model Wave {
   id        String   @id @default(cuid())
   postId    String
@@ -64,10 +56,8 @@ model Wave {
   @@index([postId])
 }
 
-// A reply on a post, shown in the scrolling ticker along the bottom of the
-// post card. Unlike Post, `userId` is required — commenting needs an account.
-// `author` is still denormalized to match Post and to keep ticker rendering
-// cheap (no join needed for the collapsed strip).
+// A reply on a post. `author` is denormalized to match Post and to keep the
+// collapsed ticker strip renderable without a join.
 model Comment {
   id        String   @id @default(cuid())
   postId    String
@@ -79,12 +69,14 @@ model Comment {
   post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  notifications Notification[]
+
   @@index([postId, createdAt])
 }
 
-// A rider's most recent shared position. One row per rider handle — we upsert
-// on each update rather than keeping a full history (keeps the "live" query
-// trivial). `sharing = false` means the rider has gone invisible.
+// A rider's most recent shared position. One row per rider handle, upserted on
+// each update rather than keeping a full history, which keeps the "live" query
+// trivial.
 model Location {
   id        String   @id @default(cuid())
   rider     String   @unique
@@ -98,32 +90,27 @@ model Location {
 }
 
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  handle       String   @unique
+  id           String  @id @default(cuid())
+  email        String  @unique
+  handle       String  @unique
   displayName  String?
   bio          String?
   passwordHash String
-  // Base avatar skin tone (hex). Equipped gear layers on top of this.
-  avatarSkin   String   @default("#c68642")
+  avatarSkin   String  @default("#c68642")
 
-  // Inseam in whole millimetres — the measurement that decides whether a rider
-  // can get a foot down (ADR 0006). Height is not a substitute: two riders of
-  // the same height can differ by 3in of inseam, which is the whole distance
-  // between flat-footing a bike and tiptoeing it.
+  // Inseam in whole millimetres — see ADR 0006.
   //
   // PRIVATE. Body data, and there is no permission layer yet, so it must never
   // leave the owner's own session — what's shareable is the verdict ("flat-foots
-  // a Rebel 500"), not the number. Layered visibility is a separate branch.
+  // a Rebel 500"), not the number.
   inseamMm       Int?
-  // "typed" (tape against a wall) or "photo" (browser-side pose estimate). A
-  // tape and an estimate don't deserve equal confidence and the verdict says so.
+  // "typed" (tape against a wall) | "photo" (browser-side pose estimate).
   inseamSource   String?
   // Spread across the three captures, in mm. Null on the typed path. Drives the
-  // borderline flag: wide spread means "go sit on one", not a verdict.
+  // borderline flag.
   inseamSpreadMm Int?
 
-  createdAt    DateTime @default(now())
+  createdAt DateTime @default(now())
 
   posts         Post[]
   comments      Comment[]
@@ -133,21 +120,20 @@ model User {
   rooms         Room[]
   conversations Participant[]
   messages      Message[]
+
+  notificationsReceived Notification[] @relation("NotificationRecipient")
+  notificationsActed    Notification[] @relation("NotificationActor")
 }
 
-// A voice room in Comms — the intercom. Opened by a rider, who is its host:
-// opening a room *is* taking the first of the four mic seats, so a room never
-// exists with nobody talking in it.
+// A voice room in Comms — the intercom. Opening a room *is* taking the first of
+// the four mic seats, so a room never exists with nobody talking in it.
 //
-// This is a session, not a channel. It lives while people are in it and
-// `closedAt` retires it, which is what makes the directory "what's happening
-// now" rather than a list of dead rooms. Topics are tags picked when the room
-// is opened, not permanent places — the title is what actually fills a room,
-// and the host can rewrite it while live as the conversation drifts.
+// This is a session, not a channel: `closedAt` retires it, which is what makes
+// the directory "what's happening now" rather than a list of dead rooms.
 //
 // Who's on the floor is deliberately *not* here: mic rights are LiveKit
-// participant permissions, which is the only copy that can't drift from what
-// the server will actually accept audio from.
+// participant permissions, the only copy that can't drift from what the server
+// will actually accept audio from.
 model Room {
   id       String    @id @default(cuid())
   title    String
@@ -171,7 +157,6 @@ model Room {
   @@index([hostId])
 }
 
-// A bike in a rider's garage, shown on their profile.
 model Motorcycle {
   id        String   @id @default(cuid())
   userId    String
@@ -196,7 +181,7 @@ model GearItem {
   rarity  String  @default("common")
   asset   String
   color   String?
-  // Granted to every new account on signup (the free starter set).
+  // Granted to every new account on signup.
   starter Boolean @default(false)
 
   owners UserGear[]
@@ -204,14 +189,14 @@ model GearItem {
   @@index([slot])
 }
 
-// A user's ownership of a gear item, plus whether it's currently equipped.
-// At most one equipped item per slot is enforced in application logic.
+// A user's ownership of a gear item. At most one equipped item per slot, which
+// is enforced in application logic, not here.
 model UserGear {
   id         String   @id @default(cuid())
   userId     String
   gearItemId String
   equipped   Boolean  @default(false)
-  // How it was acquired: starter today; "code" once brand redemption lands.
+  // "starter" | "code" (brand redemption, not yet live).
   source     String   @default("starter")
   acquiredAt DateTime @default(now())
 
@@ -222,15 +207,12 @@ model UserGear {
   @@index([userId])
 }
 
-// A 1:1 direct message thread. Unlike a Room this is a *place*, not a session:
-// it has no open/closed state, it outlives every message in it, and it's found
-// by who's in it rather than by what it's about.
+// A 1:1 direct message thread — see ADR 0003 (and 0001).
 //
-// `pairKey` is the two user ids sorted and joined with ":". It's unique, so
-// "start a DM with @x" is an upsert that can't race into two conversations for
-// the same pair — the same idempotency-via-unique-constraint move Wave makes
-// with @@unique([postId, userId]). Sorting is what makes it symmetric: A→B and
-// B→A produce the same key, so the two directions can't each mint a thread.
+// `pairKey` is the two user ids sorted and joined with ":". Sorting is what
+// makes it symmetric, and the unique constraint makes "start a DM with @x" an
+// upsert that can't race into two conversations for the same pair — the same
+// idempotency-via-unique-constraint move Wave makes.
 model Conversation {
   id      String @id @default(cuid())
   pairKey String @unique
@@ -247,9 +229,8 @@ model Conversation {
 }
 
 // One side of a conversation. A join table rather than aId/bId columns on
-// Conversation, because read state is *per side* and needs somewhere to live —
-// and because it leaves group threads possible later without a migration that
-// rewrites what's already there.
+// Conversation, because read state is *per side* and needs somewhere to live,
+// and because it leaves group threads possible later.
 model Participant {
   id             String    @id @default(cuid())
   conversationId String
@@ -259,8 +240,7 @@ model Participant {
   // they open the thread. Denormalized because the header polls it constantly
   // and a live COUNT over Message would be the app's most-run query.
   //
-  // A 40-message burst is one unread conversation here, not 40 notifications:
-  // the count that matters is how many threads are waiting on you.
+  // A 40-message burst is one unread conversation here, not 40 notifications.
   unreadCount    Int       @default(0)
 
   conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
@@ -273,10 +253,9 @@ model Participant {
 }
 
 // A message in a thread. No `author` denormalization, unlike Post and Comment:
-// a thread has exactly two people in it and always joins them anyway, so the
-// handle is free on read — and this way a handle change is reflected rather
-// than frozen into every line the rider ever sent (the newer preference, noted
-// in the Room comment above).
+// a thread has two people in it and always joins them anyway, so the handle is
+// free on read and a handle change is reflected rather than frozen into every
+// line the rider ever sent.
 model Message {
   id             String   @id @default(cuid())
   conversationId String
@@ -290,4 +269,51 @@ model Message {
   // Both of the thread's queries: render it oldest-first, and fetch "anything
   // after this timestamp" on each poll tick.
   @@index([conversationId, createdAt])
+}
+
+// Something that happened to a rider's posts — see ADR 0007.
+//
+// DMs are deliberately NOT here: unread mail is Participant.unreadCount, a
+// counter, because forty messages from one rider is one conversation waiting on
+// you, while a wave and a comment are two things and get a row each. The badge
+// adds the two counts.
+//
+// Both ends are accounts, enforced here rather than at the call sites: a
+// signed-out visitor can still wave while ANONYMOUS_WAVES_ENABLED is on, and
+// that wave notifies nobody — "someone waved" names nobody and links nowhere.
+// Nothing about the actor is copied onto the row, so a handle change is
+// reflected on read.
+model Notification {
+  id          String @id @default(cuid())
+  recipientId String
+  actorId     String
+  // "wave" | "comment" — see NOTIFICATION_TYPES in src/lib/notifications.ts.
+  // A bare String with a type guard beside it, per house convention; no enums.
+  type        String
+
+  // Which thing it happened to. Nullable because not every type carries both —
+  // a wave has no comment — and a type added later may carry neither. Real
+  // foreign keys rather than loose ids, so a deleted post can't leave a row
+  // saying somebody waved at nothing.
+  postId    String?
+  commentId String?
+
+  createdAt DateTime  @default(now())
+  // Set once when the rider reads it and never unset, which is what makes a
+  // repeat "mark read" harmless — the same reason the DM read route writes a
+  // fixed 0 rather than decrementing.
+  readAt    DateTime?
+
+  recipient User     @relation("NotificationRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+  actor     User     @relation("NotificationActor", fields: [actorId], references: [id], onDelete: Cascade)
+  post      Post?    @relation(fields: [postId], references: [id], onDelete: Cascade)
+  comment   Comment? @relation(fields: [commentId], references: [id], onDelete: Cascade)
+
+  // The panel: my notifications, newest first, and the ?before= cursor pages
+  // down the same index.
+  @@index([recipientId, createdAt])
+  // The badge count, which runs on a timer in every open tab and is the query
+  // whose cost multiplies. Also the wave dedupe guard's lookup, which filters
+  // this down by actor and post.
+  @@index([recipientId, readAt])
 }
