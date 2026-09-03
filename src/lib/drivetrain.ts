@@ -208,14 +208,16 @@ export type Gear = {
  * the cruising gear, so it's you.
  *
  * Gear 3 is Fit (ADR 0006); it took the slot Garage was holding, so Garage is
- * unplaced and wants one of the remaining blanks.
+ * unplaced and still wants a gear. Gear 4 is Anatomy (ADR 0008), which fills the
+ * last blank — every gear now has a page, so `notBuilt` in the Drivetrain has
+ * nothing left to draw dashed until a seventh idea turns up.
  */
 export function gearsFor(handle: string | null): Gear[] {
   return [
     { n: 1, label: "Feed", href: "/" },
     { n: 2, label: "Riders", href: "/riders" },
     { n: 3, label: "Fit", href: "/fit" },
-    { n: 4, label: "Routes", href: null },
+    { n: 4, label: "Anatomy", href: "/anatomy" },
     { n: 5, label: "Comms", href: "/comms" },
     { n: 6, label: "Profile", href: handle ? `/profile/${handle}` : null, auth: true },
   ];
