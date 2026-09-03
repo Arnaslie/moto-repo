@@ -102,6 +102,7 @@ const RADIATOR = poly([
   { x: 1090, h: 646 }, { x: 1186, h: 620 }, { x: 1156, h: 372 }, { x: 1064, h: 398 },
 ]) + " Z";
 
+// Two runs, not one: the radiator hides the header between them.
 const EXHAUST =
   `M 1058 ${f(Y(720))} C 1104 ${f(Y(700))} 1122 ${f(Y(674))} 1124 ${f(Y(648))} ` +
   `M 1128 ${f(Y(366))} C 1060 ${f(Y(300))} 880 ${f(Y(252))} 700 ${f(Y(236))}`;
@@ -124,6 +125,7 @@ const yoke = (h: number, half: number) => {
          `L ${f(c.x + nx * half)} ${f(Y(c.h + nh * half))}`;
 };
 
+// Starts under the tank's trailing edge, not at the steering head: above this the spar is hidden.
 const FRAME_VISIBLE = poly([
   { x: 786, h: 740 }, { x: 700, h: 692 }, { x: 640, h: 604 }, A.PIVOT,
 ]);

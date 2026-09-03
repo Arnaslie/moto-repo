@@ -32,6 +32,7 @@ export const onAxis = (h: number): Pt => {
   return { x: FRONT_AXLE.x - TRIPLE_CLAMP_OFFSET * AXIS_OUT.x + t * AXIS_UP.x, h };
 };
 
+// Queried back along the offset shift: onAxis(h).x + offset leaves the legs 8mm off the axle.
 export const onFork = (h: number): Pt => ({
   x: onAxis(h - TRIPLE_CLAMP_OFFSET * AXIS_OUT.h).x + TRIPLE_CLAMP_OFFSET * AXIS_OUT.x,
   h,
