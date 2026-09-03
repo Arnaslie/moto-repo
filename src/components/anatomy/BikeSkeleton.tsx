@@ -1,21 +1,8 @@
 import * as A from "@/lib/anatomy";
 
-/* The bike, in one weight of orange line. Same rule as the pod filter in the
-   wordmark: unfilled, so every stroke has to be an edge you could actually see
-   standing next to the thing. Nothing is drawn where one part merely passes
-   behind another.
-   
-   Hard points come from lib/anatomy — wheels, steering axis, fork line, chain
-   tangents, sprocket sizes. What's left here is the sheet metal, which is a
-   likeness hung on those points. */
-
 const { Y, poly, blob } = A;
 const f = (n: number) => n.toFixed(1);
 
-/* ---- wheels ------------------------------------------------------------- */
-
-/** Five twin-spokes, as the MT-07's cast wheels have. Drawn from the hub out to
- *  the rim rather than across, so the pairs splay the way real spokes do. */
 function Wheel({ at, r, phase }: { at: A.Pt; r: number; phase: number }) {
   const cx = at.x;
   const cy = Y(at.h);
@@ -38,20 +25,13 @@ function Wheel({ at, r, phase }: { at: A.Pt; r: number; phase: number }) {
   );
 }
 
-/* ---- final drive --------------------------------------------------------- */
-
 const CHAIN = A.chainRuns()
   .map((r) => `M ${f(r.from.x)} ${f(Y(r.from.h))} L ${f(r.to.x)} ${f(Y(r.to.h))}`)
   .join(" ");
 
-/* ---- suspension ---------------------------------------------------------- */
-
-// Nearly upright, behind the engine: top on the frame spar, bottom on the
-// linkage off the swingarm. Both ends land on parts that are actually drawn.
 const SHOCK_TOP = { x: 628, h: 628 };
 const SHOCK_BOT = { x: 536, h: 334 };
 
-/** The spring, wound along the shock's own axis rather than drawn upright. */
 const SPRING = (() => {
   const dx = SHOCK_BOT.x - SHOCK_TOP.x;
   const dh = SHOCK_BOT.h - SHOCK_TOP.h;
@@ -77,10 +57,6 @@ const SWINGARM = poly([
   { x: 20, h: 284 }, { x: 340, h: 296 }, { x: 552, h: 290 },
 ]) + " Z";
 
-/* ---- bodywork ------------------------------------------------------------
- * All of it sits behind or around the steering head, which is where a tank and
- * a headlight actually live — nothing floats out ahead of the forks. */
-
 const TANK = blob([
   { x: 1092, h: 838 }, { x: 1076, h: 902 }, { x: 980, h: 928 },
   { x: 850, h: 922 }, { x: 720, h: 876 }, { x: 664, h: 820 },
@@ -99,23 +75,14 @@ const TAIL = blob([
   { x: -40, h: 786 }, { x: 180, h: 774 }, { x: 258, h: 770 },
 ]);
 
-// Just ahead of the fork legs, which is what it is bolted to.
 const HEADLIGHT = blob([
   { x: 1160, h: 1000 }, { x: 1270, h: 986 }, { x: 1322, h: 928 },
   { x: 1300, h: 858 }, { x: 1190, h: 844 }, { x: 1136, h: 880 },
   { x: 1130, h: 950 },
 ], 0.4);
 
-/* Both members stop where the seat and tail take over. Run them the whole way
-   and they read as two loose diagonals across the back wheel, because on the
-   real bike that length is behind bodywork. */
 const SUBFRAME = poly([{ x: 652, h: 660 }, { x: 470, h: 702 }, { x: 296, h: 738 }]) +
   " " + poly([{ x: 600, h: 582 }, { x: 472, h: 700 }]);
-
-/* ---- engine --------------------------------------------------------------
- * A parallel twin with the barrels inclined forward: cases below, one barrel
- * and head in profile. The cases carry the frame's lower loads, so their top
- * edge runs up to meet the spar instead of stopping short of it. */
 
 const CASES = poly([
   { x: 600, h: 540 }, { x: 700, h: 566 }, { x: 880, h: 560 },
@@ -135,9 +102,6 @@ const RADIATOR = poly([
   { x: 1090, h: 646 }, { x: 1186, h: 620 }, { x: 1156, h: 372 }, { x: 1064, h: 398 },
 ]) + " Z";
 
-/* Headers leave the front of the head and drop behind the radiator, so only
-   the two ends of that run are drawn — the middle is genuinely out of sight,
-   and inventing it would be drawing through a part. */
 const EXHAUST =
   `M 1058 ${f(Y(720))} C 1104 ${f(Y(700))} 1122 ${f(Y(674))} 1124 ${f(Y(648))} ` +
   `M 1128 ${f(Y(366))} C 1060 ${f(Y(300))} 880 ${f(Y(252))} 700 ${f(Y(236))}`;
@@ -150,11 +114,8 @@ const MUFFLER = blob([
 
 const FOOTPEG = poly([{ x: 702, h: 406 }, { x: 634, h: 392 }, { x: 610, h: 358 }]);
 
-/* ---- front end ------------------------------------------------------------ */
-
 const BAR = poly([A.onAxis(1000), { x: 960, h: 1058 }, { x: 876, h: 1072 }, { x: 800, h: 1076 }]);
 
-/** Triple clamps: short members square across the steering axis. */
 const yoke = (h: number, half: number) => {
   const c = A.onAxis(h);
   const nx = Math.cos((A.RAKE_DEG * Math.PI) / 180);
@@ -163,9 +124,6 @@ const yoke = (h: number, half: number) => {
          `L ${f(c.x + nx * half)} ${f(Y(c.h + nh * half))}`;
 };
 
-/* The spar's visible length. It leaves the steering head under the tank, so
-   only the stretch between the tank's trailing edge and the pivot is drawn —
-   above that it is behind sheet metal. A.FRAME_SPAR keeps the whole member. */
 const FRAME_VISIBLE = poly([
   { x: 786, h: 740 }, { x: 700, h: 692 }, { x: 640, h: 604 }, A.PIVOT,
 ]);
@@ -173,7 +131,6 @@ const FRAME_VISIBLE = poly([
 const FORK_SLIDER = poly([A.onFork(322), A.onFork(612)]);
 const FORK_STANCHION = poly([A.onFork(600), A.onFork(1000)]);
 
-// Astride the rotor, on the trailing side of the leg.
 const CALIPER = blob([
   { x: 1266, h: 452 }, { x: 1330, h: 430 }, { x: 1344, h: 366 },
   { x: 1300, h: 336 }, { x: 1252, h: 372 },
@@ -184,22 +141,15 @@ const FENDER = blob([
   { x: 1528, h: 604 }, { x: 1400, h: 640 }, { x: 1280, h: 608 },
 ], 0.35);
 
-/* ---- labels --------------------------------------------------------------
- * `at` is the point on the machine; `to` is where the text sits. Leaders run
- * straight — a technical diagram, not a callout bubble — and are kept off the
- * parts by choosing which side each label lives on, not by curving around. */
-
 type Label = { name: string; note?: string; at: A.Pt; to: A.Pt; anchor: "start" | "middle" | "end" };
 
 const LABELS: Label[] = [
-  // above
   { name: "Seat", note: "805 mm", at: { x: 500, h: 807 }, to: { x: 300, h: 1240 }, anchor: "middle" },
   { name: "Handlebar", at: { x: 876, h: 1072 }, to: { x: 690, h: 1240 }, anchor: "middle" },
   { name: "Fuel tank", at: { x: 950, h: 926 }, to: { x: 1030, h: 1240 }, anchor: "middle" },
   { name: "Frame", note: "steel diamond", at: { x: 706, h: 696 }, to: { x: 1400, h: 1240 }, anchor: "middle" },
   { name: "Steering head", note: "rake 24.5°", at: A.STEERING_HEAD, to: { x: 1760, h: 1240 }, anchor: "middle" },
 
-  // ahead
   { name: "Top yoke", note: "42 mm offset", at: A.YOKE_TOP, to: { x: 2010, h: 1090 }, anchor: "start" },
   { name: "Headlight", at: { x: 1290, h: 946 }, to: { x: 2010, h: 940 }, anchor: "start" },
   { name: "Fork stanchion", note: "41 mm", at: A.onFork(800), to: { x: 2010, h: 790 }, anchor: "start" },
@@ -209,7 +159,6 @@ const LABELS: Label[] = [
   { name: "Front axle", at: A.FRONT_AXLE, to: { x: 2010, h: 190 }, anchor: "start" },
   { name: "Front tyre", note: "120/70-17", at: { x: 1666, h: 214 }, to: { x: 2010, h: 40 }, anchor: "start" },
 
-  // behind
   { name: "Tail light", at: { x: -288, h: 848 }, to: { x: -840, h: 1050 }, anchor: "end" },
   { name: "Subframe", at: { x: 420, h: 716 }, to: { x: -840, h: 900 }, anchor: "end" },
   { name: "Rear shock", note: "monoshock", at: { x: 582, h: 490 }, to: { x: -840, h: 750 }, anchor: "end" },
@@ -217,10 +166,7 @@ const LABELS: Label[] = [
   { name: "Rear sprocket", note: "43T", at: { x: -74, h: 392 }, to: { x: -840, h: 450 }, anchor: "end" },
   { name: "Rear tyre", note: "180/55-17", at: { x: -302, h: 262 }, to: { x: -840, h: 300 }, anchor: "end" },
 
-  /* Below, in two tiers. Seven parts share the underside of the bike inside
-     900 mm, which is narrower than their names; staggering the rows lets each
-     leader stay near-vertical instead of fanning out across the wheels. */
-  { name: "Swingarm", at: { x: 250, h: 300 }, to: { x: -200, h: -350 }, anchor: "middle" },
+    { name: "Swingarm", at: { x: 250, h: 300 }, to: { x: -200, h: -350 }, anchor: "middle" },
   { name: "Muffler", at: { x: 520, h: 168 }, to: { x: 210, h: -170 }, anchor: "middle" },
   { name: "Swingarm pivot", at: A.PIVOT, to: { x: 560, h: -350 }, anchor: "middle" },
   { name: "Footpeg", at: { x: 664, h: 396 }, to: { x: 880, h: -170 }, anchor: "middle" },
@@ -229,8 +175,6 @@ const LABELS: Label[] = [
   { name: "Radiator", at: { x: 1140, h: 500 }, to: { x: 1860, h: -350 }, anchor: "middle" },
 ];
 
-/** The leader stops short of the part so the arrow has somewhere to land, and
- *  starts clear of the text so it never runs into its own lettering. */
 function Leader({ l }: { l: Label }) {
   const dx = l.at.x - l.to.x;
   const dh = l.at.h - l.to.h;
@@ -267,7 +211,7 @@ export function BikeSkeleton() {
         </marker>
       </defs>
 
-      {/* the machine */}
+      {}
       <g fill="none" stroke="var(--anat-line)" strokeLinecap="round" strokeLinejoin="round">
         <g strokeWidth={9}>
           <Wheel at={A.REAR_AXLE} r={A.R_REAR} phase={0.35} />
@@ -312,7 +256,7 @@ export function BikeSkeleton() {
           <path d={CALIPER} strokeWidth={6} />
           <path d={FENDER} strokeWidth={6} />
 
-          {/* the road, only where the tyres touch it */}
+          {}
           <g strokeWidth={6} opacity={0.5}>
             <path d={`M -170 ${Y(0)} L 170 ${Y(0)}`} />
             <path d={`M 1235 ${Y(0)} L 1565 ${Y(0)}`} />
@@ -320,7 +264,7 @@ export function BikeSkeleton() {
         </g>
       </g>
 
-      {/* the labels */}
+      {}
       <g>
         {LABELS.map((l) => (
           <g key={l.name} className="group">

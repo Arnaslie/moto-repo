@@ -207,10 +207,8 @@ export type Gear = {
  * because an intercom is what you're in once you've stopped moving. Sixth is
  * the cruising gear, so it's you.
  *
- * Gear 3 is Fit (ADR 0006); it took the slot Garage was holding, so Garage is
- * unplaced and still wants a gear. Gear 4 is Anatomy (ADR 0008), which fills the
- * last blank — every gear now has a page, so `notBuilt` in the Drivetrain has
- * nothing left to draw dashed until a seventh idea turns up.
+ * Gear 3 is Fit (ADR 0006) and gear 4 is Anatomy (ADR 0008); Garage is still
+ * unplaced and has no blank left to take.
  */
 export function gearsFor(handle: string | null): Gear[] {
   return [

@@ -6,12 +6,6 @@ export const metadata = {
   description: "Every part of a naked bike, named and pointed at.",
 };
 
-// Fourth gear. See ADR 0008.
-//
-// Nothing here is dynamic — no session, no query, no client JS — but the route
-// still renders on demand, because the shared layout reads the session cookie
-// for the header. Worth knowing before anyone tries to prerender this.
-
 const SPECS = [
   { k: "Wheelbase", v: `${WHEELBASE} mm` },
   { k: "Rake", v: `${RAKE_DEG}°` },
@@ -30,13 +24,8 @@ export default function AnatomyPage() {
         </p>
       </header>
 
-      {/* The figure is the one thing on the page that wants more than the
-          feed column: it breaks out to the viewport and centres on it, while
-          the prose above and below stays in the column where it reads. */}
-      <div className="relative left-1/2 w-[min(100vw-2rem,1400px)] -translate-x-1/2 overflow-x-auto">
-        {/* Below about a tablet the figure would shrink past the point where its
-            labels can be read, so it keeps a floor and pans instead. */}
-        <div className="min-w-[1100px]">
+            <div className="relative left-1/2 w-[min(100vw-2rem,1400px)] -translate-x-1/2 overflow-x-auto">
+                <div className="min-w-[1100px]">
           <BikeSkeleton />
         </div>
       </div>

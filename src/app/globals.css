@@ -35,9 +35,6 @@
   --drive-accent-soft: rgba(249, 115, 22, 0.12);
 }
 
-/* Anatomy diagram (gear 4). The bike is drawn in the brand orange, which
-   carries both schemes unchanged; only the leaders and lettering flip, because
-   they are reading matter rather than part of the machine. */
 :root {
   --anat-line: #f97316;
   --anat-lead: rgba(23, 23, 27, 0.42);
