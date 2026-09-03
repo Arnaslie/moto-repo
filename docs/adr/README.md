@@ -19,3 +19,4 @@ editing history — the wrong turns are half of what makes the file worth keepin
 | [0005](./0005-chrome-in-a-layout.md) | The chrome moves into a layout | Implemented — revises 0001's reasoning about where the header lives |
 | [0006](./0006-seat-height-fit.md) | Seat height fit, measured off the rider | Partly implemented — fit check built, rider reports not |
 | [0007](./0007-notifications-polled.md) | Notifications, polled | Accepted, not yet implemented |
+| [0008](./0008-anatomy-diagram.md) | Anatomy, drawn to a real machine | Implemented |

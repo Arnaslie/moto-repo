@@ -35,6 +35,13 @@
   --drive-accent-soft: rgba(249, 115, 22, 0.12);
 }
 
+:root {
+  --anat-line: #f97316;
+  --anat-lead: rgba(23, 23, 27, 0.42);
+  --anat-text: #171717;
+  --anat-note: #7c848d;
+}
+
 /* The pod filter in the wordmark. The brand orange carries both schemes the
    same way --drive-accent does, so unlike the rest of the palette this token
    deliberately has no dark-mode counterpart below. */
@@ -60,6 +67,10 @@
     --drive-accent-edge: #c2560c;
     --drive-accent-text: #fb923c;
     --drive-accent-soft: rgba(249, 115, 22, 0.14);
+
+    --anat-lead: rgba(237, 237, 237, 0.46);
+    --anat-text: #ededed;
+    --anat-note: #8f979f;
   }
 }
 
