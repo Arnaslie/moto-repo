@@ -40,6 +40,15 @@
   --anat-lead: rgba(23, 23, 27, 0.42);
   --anat-text: #171717;
   --anat-note: #7c848d;
+
+  --chalk-casing: rgba(255, 255, 255, 0.9);
+  --chalk-surface: #a16207;
+  --chalk-hazard: #dc2626;
+  --chalk-character: #2563eb;
+  --chalk-stop: #059669;
+  --chalk-draft: #f97316;
+  --chalk-tip-bg: rgba(255, 255, 255, 0.92);
+  --chalk-tip-text: #171717;
 }
 
 /* The pod filter in the wordmark. The brand orange carries both schemes the
@@ -71,6 +80,15 @@
     --anat-lead: rgba(237, 237, 237, 0.46);
     --anat-text: #ededed;
     --anat-note: #8f979f;
+
+    --chalk-casing: rgba(10, 10, 10, 0.85);
+    --chalk-surface: #eab308;
+    --chalk-hazard: #f87171;
+    --chalk-character: #60a5fa;
+    --chalk-stop: #34d399;
+    --chalk-draft: #fb923c;
+    --chalk-tip-bg: rgba(12, 12, 14, 0.9);
+    --chalk-tip-text: #ededed;
   }
 }
 
@@ -180,4 +198,60 @@ body {
   [data-ticker-copy="duplicate"] {
     display: none;
   }
+}
+
+.chalk-casing {
+  stroke: var(--chalk-casing);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.chalk-core {
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  cursor: pointer;
+}
+
+.chalk-surface {
+  stroke: var(--chalk-surface);
+}
+
+.chalk-hazard {
+  stroke: var(--chalk-hazard);
+}
+
+.chalk-character {
+  stroke: var(--chalk-character);
+}
+
+.chalk-stop {
+  stroke: var(--chalk-stop);
+}
+
+.chalk-draft {
+  stroke: var(--chalk-draft);
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.chalk-draft-vertex {
+  stroke: var(--chalk-draft);
+  fill: var(--chalk-draft);
+}
+
+.leaflet-tooltip.chalk-tip {
+  background: var(--chalk-tip-bg);
+  color: var(--chalk-tip-text);
+  border: none;
+  border-radius: 4px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 6px;
+  white-space: nowrap;
+}
+
+.leaflet-tooltip.chalk-tip::before {
+  display: none;
 }
