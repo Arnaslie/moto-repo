@@ -137,7 +137,14 @@ Blob enforces both.
 
 ### 3. Build config ✅ done
 
-- `"postinstall": "prisma generate"` is now in `package.json`. Without it the
+> **Monorepo, since 2026-09-03.** The app now lives in `apps/web`, with shared
+> pure logic in `packages/core` (see ADR 0009). Vercel needs its **Root
+> Directory** set to `apps/web`, with *"Include files outside the root
+> directory"* left on so the workspace root and `packages/core` are available
+> at install time. The scripts below are `apps/web/package.json`'s, unchanged
+> otherwise — Vercel still finds `vercel-build` there.
+
+- `"postinstall": "prisma generate"` is now in `apps/web/package.json`. Without it the
   build fails on Vercel with *"@prisma/client did not initialize yet"*, because
   the dependency cache restores `node_modules` without re-running the
   generator.

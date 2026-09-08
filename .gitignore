@@ -1,7 +1,7 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies
-/node_modules
+node_modules/
 /.pnp
 .pnp.*
 .yarn/*
@@ -11,14 +11,14 @@
 !.yarn/versions
 
 # testing
-/coverage
+coverage/
 
-# next.js
-/.next/
-/out/
+# next.js (patterns are unanchored: they must match under apps/* too)
+.next/
+out/
 
 # production
-/build
+build/
 
 # misc
 .DS_Store
@@ -35,12 +35,13 @@ yarn-error.log*
 !.env.example
 
 # prisma / sqlite (keep migrations, ignore the local db)
-/prisma/*.db
-/prisma/*.db-journal
+**/prisma/*.db
+**/prisma/*.db-journal
 
-# user-uploaded images, served via the /media route (keep folder, ignore contents)
-/uploads/*
-!/uploads/.gitkeep
+# user-uploaded images, served via the /media route (keep folder, ignore contents).
+# Anchored to the app: a bare uploads/ pattern also swallows src/app/api/uploads/.
+/apps/*/uploads/*
+!/apps/*/uploads/.gitkeep
 
 # vercel
 .vercel
