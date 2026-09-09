@@ -40,6 +40,10 @@
   --anat-lead: rgba(23, 23, 27, 0.42);
   --anat-text: #171717;
   --anat-note: #7c848d;
+
+  --odo-ground: rgba(23, 23, 27, 0.05);
+  --odo-ghost: rgba(23, 23, 27, 0.11);
+  --odo-lit: rgba(23, 23, 27, 0.58);
 }
 
 /* The pod filter in the wordmark. The brand orange carries both schemes the
@@ -71,6 +75,10 @@
     --anat-lead: rgba(237, 237, 237, 0.46);
     --anat-text: #ededed;
     --anat-note: #8f979f;
+
+    --odo-ground: rgba(255, 255, 255, 0.06);
+    --odo-ghost: rgba(237, 237, 237, 0.13);
+    --odo-lit: rgba(237, 237, 237, 0.62);
   }
 }
 
@@ -179,5 +187,33 @@ body {
   }
   [data-ticker-copy="duplicate"] {
     display: none;
+  }
+}
+
+.odo-ground {
+  fill: var(--odo-ground);
+  stroke: none;
+}
+
+.odo-ghost {
+  fill: var(--odo-ghost);
+}
+
+.odo-lit {
+  fill: var(--odo-lit);
+  transition: fill 140ms ease-out;
+}
+
+.odo[data-waiting="true"] .odo-lit {
+  fill: #f97316;
+}
+
+.odo:hover .odo-lit {
+  fill: #f97316;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .odo-lit {
+    transition: none;
   }
 }
