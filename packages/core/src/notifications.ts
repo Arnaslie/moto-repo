@@ -33,8 +33,8 @@ export function excerpt(text: string): string {
 /**
  * What the wheel is counting: unread DM conversations, and unread activity
  * rows. Two numbers rather than one sum, because they're counted by different
- * rules — conversations vs rows — and the announcement has to say which is
- * which. The badge renders `conversations + activity`.
+ * rules — conversations vs rows. Since ADR 0012 they drive two separate
+ * instruments: conversations the odometer, activity the wheel.
  */
 export type Waiting = { conversations: number; activity: number };
 
