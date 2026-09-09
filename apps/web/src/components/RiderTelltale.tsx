@@ -17,12 +17,10 @@ export function RiderTelltale({
   handle,
   activity,
   detents,
-  onRead,
 }: {
   handle: string;
   activity: number;
   detents: number;
-  onRead: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -73,11 +71,7 @@ export function RiderTelltale({
       </button>
 
       {open && (
-        <NotificationPanel
-          handle={handle}
-          onClose={close}
-          onRead={onRead}
-        />
+        <NotificationPanel handle={handle} onClose={close} />
       )}
     </div>
   );

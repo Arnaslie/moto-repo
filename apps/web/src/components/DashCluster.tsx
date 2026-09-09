@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { OdometerLink } from "@/components/OdometerLink";
 import { RiderTelltale } from "@/components/RiderTelltale";
 import type { Waiting } from "@moto/core/notifications";
+import { onUnreadChanged } from "@/lib/unread-signal";
 
 const POLL_MS = 20000;
 
@@ -77,22 +78,19 @@ export function DashCluster({
     };
   }, [handle, apply]);
 
-  // Lets the panel drop the count the moment it marks something read, instead
-  // of the wheel staying lit until the next 20s tick.
+  // Lets anything that clears a count say so, instead of the instruments
+  // staying lit until the next 20s tick.
   const refresh = useCallback(async () => {
     const next = await fetchWaiting(handle);
     if (next) apply(next);
   }, [handle, apply]);
 
+  useEffect(() => onUnreadChanged(refresh), [refresh]);
+
   return (
     <div className="flex items-center gap-2.5">
       <OdometerLink count={waiting.conversations} />
-      <RiderTelltale
-        handle={handle}
-        activity={waiting.activity}
-        detents={detents}
-        onRead={refresh}
-      />
+      <RiderTelltale handle={handle} activity={waiting.activity} detents={detents} />
     </div>
   );
 }

@@ -9,6 +9,7 @@ import {
   notificationSentence,
   type NotificationDTO,
 } from "@moto/core/notifications";
+import { announceUnreadChanged } from "@/lib/unread-signal";
 
 /**
  * The dropdown under the wheel: waves and comments, newest first.
@@ -21,12 +22,9 @@ import {
 export function NotificationPanel({
   handle,
   onClose,
-  onRead,
 }: {
   handle: string;
   onClose: () => void;
-  /** Lets the wheel drop its count without waiting for the next 20s tick. */
-  onRead: () => void;
 }) {
   const router = useRouter();
   const [notifications, setNotifications] = useState<NotificationDTO[] | null>(null);
@@ -102,7 +100,7 @@ export function NotificationPanel({
       // so without this the dots, the "Unread." in each label and the mark-all
       // button all stay as they were until the panel is reopened.
       setNotifications((prev) => (prev ? markNotificationsRead(prev, ids) : prev));
-      onRead();
+      announceUnreadChanged();
     } catch {
       /* the next tick corrects the count */
     }
