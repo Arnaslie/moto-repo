@@ -6,9 +6,6 @@ import { Avatar } from "@/components/Avatar";
 import type { ConversationSummary } from "@moto/core/messages";
 import { timeAgo } from "@moto/core/format";
 
-// Threads move on the scale of a conversation, not of a room filling up, so
-// this is the same slow tick the directory uses. The thread page itself polls
-// harder — that's where you're actually waiting on a reply.
 const POLL_MS = 10000;
 
 export function Inbox({
@@ -16,7 +13,6 @@ export function Inbox({
   me,
 }: {
   initialConversations: ConversationSummary[];
-  /** The viewer's own handle, so a preview of their own line can say so. */
   me: string;
 }) {
   const [conversations, setConversations] = useState(initialConversations);
@@ -30,7 +26,6 @@ export function Inbox({
         const data = await res.json();
         if (active && Array.isArray(data.conversations)) setConversations(data.conversations);
       } catch {
-        /* transient — the next tick retries */
       }
     }
     const id = setInterval(load, POLL_MS);
