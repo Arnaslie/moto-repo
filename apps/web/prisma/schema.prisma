@@ -121,6 +121,9 @@ model User {
   conversations Participant[]
   messages      Message[]
 
+  stretches    Stretch[]
+  stretchVotes StretchVote[]
+
   notificationsReceived Notification[] @relation("NotificationRecipient")
   notificationsActed    Notification[] @relation("NotificationActor")
 }
@@ -316,4 +319,57 @@ model Notification {
   // whose cost multiplies. Also the wave dedupe guard's lookup, which filters
   // this down by actor and post.
   @@index([recipientId, readAt])
+}
+
+model Stretch {
+  id       String @id @default(cuid())
+  authorId String
+
+  kind  String
+  label String
+  slug  String
+
+  path   Json
+  minLat Float
+  maxLat Float
+  minLng Float
+  maxLng Float
+
+  createdAt DateTime @default(now())
+
+  author User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  votes  StretchVote[]
+
+  @@index([minLat, maxLat])
+  @@index([minLng, maxLng])
+  @@index([authorId])
+  @@index([slug])
+}
+
+model StretchVote {
+  id        String   @id @default(cuid())
+  stretchId String
+  userId    String
+  value     Int
+  createdAt DateTime @default(now())
+
+  stretch Stretch @relation(fields: [stretchId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([stretchId, userId])
+  @@index([stretchId])
+}
+
+model TagTrend {
+  id    String @id @default(cuid())
+  cell  String
+  slug  String
+  label String
+  kind  String
+  count Int
+
+  computedAt DateTime @default(now())
+
+  @@unique([cell, slug])
+  @@index([cell, count])
 }
