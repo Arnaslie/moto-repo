@@ -5,10 +5,6 @@ import { TrickSequence } from "@/components/tricks/TrickSequence";
 
 type Props = { params: Promise<{ slug: string }> };
 
-export function generateStaticParams() {
-  return TRICKS.map((t) => ({ slug: t.slug }));
-}
-
 export async function generateMetadata({ params }: Props) {
   const trick = trickBySlug((await params).slug);
   return trick ? { title: `${trick.name} · Tricks · moto-repo`, description: trick.summary } : {};
