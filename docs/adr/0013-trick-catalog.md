@@ -6,7 +6,10 @@
   keeps 0008's diagram and repurposes it
 - **Touches (planned):** `packages/core/src/tricks.ts` (new),
   `packages/core/src/drivetrain.ts` (gear 4),
+  `packages/core/src/anatomy.ts` (fork dive),
   `apps/web/src/components/anatomy/BikeSkeleton.tsx`,
+  `apps/web/src/components/tricks/TrickSequence.tsx` (new),
+  `apps/web/src/app/globals.css` (`bike-*`),
   `apps/web/src/app/(app)/tricks/page.tsx` (new),
   `apps/web/src/app/(app)/tricks/[slug]/page.tsx` (new),
   `apps/web/src/app/(app)/anatomy/page.tsx` (removed)
@@ -44,18 +47,18 @@ app and a future mobile app read the same file. Nothing in this record needs
 the database.
 
 ```ts
-type Control = "throttle" | "front-brake" | "clutch" | "rear-brake" | "shifter" | "footpegs";
+type Control = "throttle" | "front-brake" | "clutch" | "rear-brake" | "shifter" | "footpegs" | "tank";
 
 type Trick = {
   slug: string;
   name: string;
   family: "foundations" | "wheelies" | "stoppies" | "slides";
   summary: string;
-  controls: Control[];
   requires: string[];                        // slugs of other tricks
   strength: { area: string; test: string }[];
   kit: { protective: string[]; bike: string[] };
-  progression: string[];
+  sequence: [Beat, ...Beat[]];               // one attempt, beat by beat
+  progression: string[];                     // the stages across weeks
   bailOut: string;
 };
 ```
@@ -114,9 +117,68 @@ a stoppie it is releasing the front brake. A trick the rider cannot abort
 reliably is one they have not got the prerequisites for, which is why the
 foundations exist.
 
-### The diagram lights the controls, and the far side is dashed
+### Every trick follows one template
 
-`BikeSkeleton` takes a `lit: Control[]` prop and highlights those parts.
+The first draft's progressions mixed two things in one list: stages that take
+weeks ("short lifts from 25 km/h") and what the hands and feet do inside a
+single attempt ("feed the clutch until the bike pushes against the brake"). Read
+as text, neither made sense, and words like "lever" and "feed" assumed the
+reader already knew the controls. Every trick — these nine and any added later —
+now carries both, separately:
+
+- **Sequence** — one attempt, beat by beat. Each beat lists its inputs and says
+  in plain words what the bike does. An input names a control, and the control
+  carries the body part that works it, so a beat reads "Right hand · Front
+  brake: squeeze gently".
+- **Progression** — the stages across weeks, in plain words, with no control
+  jargon. Each step is read on its own, so every action in it names its
+  control — "let go of the rear brake", never just "let go". The same holds
+  for summaries and bail-outs.
+
+The type is the template: `sequence` and each beat's `inputs` are non-empty
+tuples, and a beat without a bike description or a motion does not compile.
+A trick's controls are no longer a separate field; they are whatever its
+sequence uses.
+
+```ts
+type Beat = {
+  inputs: [{ control: Control; action: string }, ...];
+  bike: string;
+  motion: "still" | "rolling" | "burnout" | "skid";
+  pitch?: number;  // degrees; + front wheel up, − rear wheel up
+  dive?: number;   // share of fork travel, 0–1
+};
+```
+
+### The diagram plays the sequence on a loop
+
+`TrickSequence` steps through the beats on a timer and hands each one to
+`BikeSkeleton`, which lights the controls that beat uses and moves the bike to
+match. Choosing a beat from the list pauses on it.
+
+The movement comes from the geometry, not keyframes drawn by eye:
+
+- **Pitch pivots on an axle.** A wheel turns about its axle, so that is the
+  point the bike rotates around while the tyre stays on the ground. A wheelie
+  pivots on the rear axle, a stoppie on the front.
+- **Fork dive** slides the front wheel up the fork axis by a share of the
+  MT-07's 130 mm of travel, and rotates the rest of the bike about the rear
+  axle by exactly the angle that keeps the front tyre on the ground. The
+  wheelbase shortens as the fork compresses, as it does on the real bike.
+- **Wheel speed follows tyre size.** At the same road speed the smaller front
+  tyre turns faster than the rear, and the ground scrolls at the rear tyre's
+  surface speed, so the tyre neither slips nor drags — until a burnout spins it
+  with the ground still, or a skid stops it with the ground moving.
+
+Picked, not derived: the beat length, the road speed the animation plays at,
+and each beat's pitch angle and dive share. The pitch angles are illustrative,
+not a claim about where any bike balances.
+
+**A side view can't show everything.** The handlebars turned in a U-turn and the
+rear swinging out in a slide both happen across the bike, out of this view.
+Those beats say so in words instead of faking it.
+
+### The far side is dashed
 
 0008 drew the bike from its **right** side: exhaust, front caliper, the
 throttle-side bar. From the right the throttle, front brake lever, rear brake
@@ -129,10 +191,15 @@ technical drawing draws any hidden edge: as a **dashed line**. This record takes
 the dashed line. It is a real drafting convention, it keeps one diagram per
 page, and it doesn't hide the fact that the clutch is on the other side.
 
-The diagram currently draws the bar and footpeg but no levers or pedals, so
-the throttle grip, front brake lever, rear brake pedal, clutch lever and
-shifter are new parts. They are placed from MT-07 dimensions like the rest of
-the drawing, not by eye.
+The diagram drew the bar and footpeg but no levers or pedals, so the throttle
+grip, front brake lever, rear brake pedal, clutch lever and shifter are new
+parts. There are no published positions for them, so unlike the rest of the
+drawing they are **placed by eye** against the bar and footpeg. From the side
+the clutch lever sits directly behind the front brake lever, so the two share
+one outline, and the clutch is drawn dashed over it only while it is in use.
+
+The labels and leader lines 0008 drew are gone with the page; the trick pages
+name controls in the beat list instead, and git keeps the labelled version.
 
 ### Practice is on closed ground
 
@@ -183,8 +250,13 @@ Prisma half does not justify a migration of its own yet.
 - **Strength tests are picked numbers** and will be argued with.
 - **`/anatomy` stops existing.** Anyone with it bookmarked gets a 404; the
   unlabelled diagram only appears in a trick's context from now on.
-- **Five new parts on the diagram**, each needing a real position, and dashed
-  hidden lines have to stay legible at the diagram's scroll width in both themes.
+- **Five new parts are placed by eye**, in a drawing that is otherwise computed.
+  A rider who knows the MT-07 may spot a pedal a few centimetres off.
+- **Motion is costlier than a static highlight**: a client component, a timer,
+  and CSS transforms nested three deep. Reduced-motion users get the beats
+  without the tweening or spinning.
+- **Every new trick costs more to add.** A sequence with timed beats and poses
+  is real authoring work on top of the text, and that is deliberate.
 - **Derived difficulty only ranks by depth.** It first flattened the stoppie
   level with the friction zone, which is why front brake modulation exists as a
   foundation. Any new trick with no honest prerequisite will rate as easy
