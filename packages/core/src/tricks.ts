@@ -1,10 +1,11 @@
 export const CONTROLS = {
-  throttle: "Throttle",
-  "front-brake": "Front brake",
-  clutch: "Clutch",
-  "rear-brake": "Rear brake",
-  shifter: "Gear shifter",
-  footpegs: "Footpegs",
+  throttle: { name: "Throttle", by: "Right hand" },
+  "front-brake": { name: "Front brake", by: "Right hand" },
+  clutch: { name: "Clutch", by: "Left hand" },
+  "rear-brake": { name: "Rear brake", by: "Right foot" },
+  shifter: { name: "Gear shifter", by: "Left foot" },
+  footpegs: { name: "Footpegs", by: "Feet" },
+  tank: { name: "Tank", by: "Knees" },
 } as const;
 
 export type Control = keyof typeof CONTROLS;
@@ -33,15 +34,27 @@ export type Strength = { area: string; test: string };
 
 export type TrickKit = { protective: string[]; bike: string[] };
 
+export type Motion = "still" | "rolling" | "burnout" | "skid";
+
+export type Input = { control: Control; action: string };
+
+export type Beat = {
+  inputs: [Input, ...Input[]];
+  bike: string;
+  motion: Motion;
+  pitch?: number;
+  dive?: number;
+};
+
 export type Trick = {
   slug: TrickSlug;
   name: string;
   family: Family;
   summary: string;
-  controls: Control[];
   requires: TrickSlug[];
   strength: Strength[];
   kit: TrickKit;
+  sequence: [Beat, ...Beat[]];
   progression: string[];
   bailOut: string;
 };
@@ -62,91 +75,235 @@ const CATALOG: Record<TrickSlug, Omit<Trick, "slug">> = {
   "friction-zone": {
     name: "Friction zone",
     family: "foundations",
-    summary: "Holding the clutch part-way, where the plates start to bite, to feed in drive without stalling or lurching.",
-    controls: ["clutch", "throttle"],
+    summary: "Letting the clutch out only part of the way, to the spot where it starts to pull, so the bike moves off smoothly without stalling or jerking.",
     requires: [],
     strength: [hang(20)],
-    kit: { protective: BASIC, bike: ["Clutch lever reach adjusted to your fingers"] },
-    progression: [
-      "Stationary in first, find the bite point and hold it until the bike just starts to creep",
-      "Walk the bike forward on the clutch alone, no throttle",
-      "Ride at walking pace with the throttle held steady, speed set only by the clutch",
-      "Stop and pull away on a slope without touching the brakes",
+    kit: { protective: BASIC, bike: ["Clutch adjusted so it sits in easy reach of your fingers"] },
+    sequence: [
+      {
+        inputs: [
+          { control: "clutch", action: "pull all the way in" },
+          { control: "shifter", action: "press down into first" },
+        ],
+        bike: "Stopped, in first gear",
+        motion: "still",
+      },
+      {
+        inputs: [{ control: "clutch", action: "let out slowly until you feel it start to pull" }],
+        bike: "The engine note drops and the bike wants to creep forward",
+        motion: "still",
+      },
+      {
+        inputs: [
+          { control: "clutch", action: "hold it right there" },
+          { control: "throttle", action: "hold a little gas" },
+        ],
+        bike: "Rolls forward at walking pace",
+        motion: "rolling",
+      },
+      {
+        inputs: [
+          { control: "clutch", action: "pull back in" },
+          { control: "rear-brake", action: "press gently" },
+        ],
+        bike: "Rolls to a stop",
+        motion: "still",
+      },
     ],
-    bailOut: "Pull the clutch in fully. Drive is gone the moment the plates separate.",
+    progression: [
+      "Sitting still in first, let the clutch out slowly until you feel the bike start to pull, then pull it back in. Repeat until you can find that spot without thinking",
+      "Walk the bike forward using only the clutch, with no gas",
+      "Ride at walking pace with a little steady gas, controlling your speed with the clutch alone",
+      "Stop and set off again on a slope without using the brakes",
+    ],
+    bailOut: "Pull the clutch all the way in. The engine stops driving the wheel straight away.",
   },
   "rear-brake-cover": {
     name: "Covering the rear brake",
     family: "foundations",
-    summary: "Riding with the ball of the right foot over the pedal, so the rear brake goes on without moving the foot.",
-    controls: ["rear-brake", "footpegs"],
+    summary: "Riding with your right foot hovering over the rear brake pedal, so you can brake without moving your foot first.",
     requires: [],
     strength: [balance(30)],
-    kit: { protective: BASIC, bike: ["Rear brake pedal height set to your foot on the peg"] },
+    kit: { protective: BASIC, bike: ["Rear brake pedal height set so your foot rests over it"] },
+    sequence: [
+      {
+        inputs: [
+          { control: "throttle", action: "hold steady" },
+          { control: "rear-brake", action: "rest your foot over it without pressing" },
+        ],
+        bike: "Rolling at walking pace",
+        motion: "rolling",
+      },
+      {
+        inputs: [{ control: "rear-brake", action: "press lightly" }],
+        bike: "Slows down and stays level",
+        motion: "rolling",
+      },
+      {
+        inputs: [
+          { control: "rear-brake", action: "press firmly" },
+          { control: "clutch", action: "pull in" },
+        ],
+        bike: "Comes to a stop",
+        motion: "still",
+      },
+    ],
     progression: [
-      "Set the pedal height so your foot rests over it without pressing",
-      "Ride at walking pace with the foot covering the pedal the whole time",
-      "Drag the rear brake lightly against a steady throttle",
-      "Stop from 20 km/h on the rear brake alone",
+      "Adjust the pedal so your foot can rest over it without pressing",
+      "Ride slowly with your right foot hovering over the pedal the whole time",
+      "Press the rear brake pedal lightly while holding a little gas, and feel the bike slow",
+      "Stop from 20 km/h using only the rear brake",
     ],
     bailOut: "Lift your foot off the pedal.",
   },
   "front-brake-modulation": {
     name: "Front brake modulation",
     family: "foundations",
-    summary: "Squeezing the front brake progressively, loading the tyre before braking hard instead of grabbing the lever.",
-    controls: ["front-brake"],
+    summary: "Squeezing the front brake gradually, gently first and then harder, instead of grabbing it all at once.",
     requires: [],
     strength: [hang(30), plank(45)],
-    kit: { protective: ARMOURED, bike: ["Front brake lever reach adjusted to your fingers"] },
-    progression: [
-      "Ride with two fingers covering the lever",
-      "Progressive stops from 30 km/h, feeling the fork compress before squeezing harder",
-      "Brace on the tank with your knees so your arms carry none of the stop",
-      "Hard stops from 50 km/h, as short as you can make them",
+    kit: { protective: ARMOURED, bike: ["Front brake adjusted so it sits in easy reach of your fingers"] },
+    sequence: [
+      {
+        inputs: [
+          { control: "throttle", action: "close" },
+          { control: "front-brake", action: "rest two fingers on it" },
+        ],
+        bike: "Rolling at 30 km/h",
+        motion: "rolling",
+      },
+      {
+        inputs: [
+          { control: "front-brake", action: "squeeze gently" },
+          { control: "tank", action: "grip" },
+        ],
+        bike: "The front fork starts to sink",
+        motion: "rolling",
+        dive: 0.35,
+      },
+      {
+        inputs: [
+          { control: "front-brake", action: "squeeze harder, smoothly" },
+          { control: "clutch", action: "pull in" },
+        ],
+        bike: "The fork sinks most of the way and the bike slows hard",
+        motion: "rolling",
+        dive: 0.85,
+      },
+      {
+        inputs: [{ control: "front-brake", action: "ease off as the bike stops" }],
+        bike: "Stops, and the fork rises back up",
+        motion: "still",
+      },
     ],
-    bailOut: "Ease off the lever. A locked front wheel regains grip as soon as it is released.",
+    progression: [
+      "Ride with two fingers resting on the front brake",
+      "Stop from 30 km/h, squeezing the front brake gently at first and harder once you feel the front of the bike dip",
+      "Grip the tank with your knees so your arms stay relaxed while you stop",
+      "Stop from 50 km/h in as short a distance as you can, still squeezing the front brake smoothly",
+    ],
+    bailOut: "Ease off the front brake. A front wheel that has stopped turning grips again as soon as you let go of the brake.",
   },
   "slow-u-turn": {
     name: "Slow-speed U-turn",
     family: "foundations",
-    summary: "A full-lock turn inside two lanes' width, balanced on the clutch, throttle and rear brake.",
-    controls: ["clutch", "throttle", "rear-brake"],
+    summary: "Turning the bike around within two lanes' width, with the handlebars turned all the way, kept steady by the clutch, gas and rear brake.",
     requires: ["friction-zone", "rear-brake-cover"],
     strength: [plank(45), balance(30)],
     kit: { protective: BASIC, bike: ["Frame sliders"] },
-    progression: [
-      "Figure-eights at walking pace in an empty car park",
-      "Turn your head to where the turn exits, not the ground in front of the wheel",
-      "Tighten the figure-eights until the bars reach full lock",
-      "U-turns inside a 6 m box",
+    sequence: [
+      {
+        inputs: [
+          { control: "clutch", action: "hold where it starts to pull" },
+          { control: "throttle", action: "hold a little gas" },
+          { control: "rear-brake", action: "drag lightly" },
+        ],
+        bike: "Walking pace, handlebars turned all the way",
+        motion: "rolling",
+      },
+      {
+        inputs: [{ control: "rear-brake", action: "press a little more" }],
+        bike: "Slows and tightens the turn",
+        motion: "rolling",
+      },
+      {
+        inputs: [
+          { control: "clutch", action: "let out a touch" },
+          { control: "rear-brake", action: "ease off" },
+        ],
+        bike: "Stands itself back up if it starts leaning into the turn",
+        motion: "rolling",
+      },
     ],
-    bailOut: "Feed out the clutch. Drive stands the bike back up; grabbing the front brake at full lock drops it.",
+    progression: [
+      "Ride figure-eights at walking pace in an empty car park",
+      "Turn your head and look where you want to end up, not at the ground in front of you",
+      "Make the figure-eights tighter until the handlebars are turned all the way",
+      "Do U-turns inside a 6 m box",
+    ],
+    bailOut: "Let the clutch out a little. Pulling the bike forward stands it back up; grabbing the front brake with the bars turned drops it.",
   },
   "power-wheelie": {
     name: "Power wheelie",
     family: "wheelies",
-    summary: "Lifting the front wheel on the throttle alone, by rolling off and snapping back on to pump the fork.",
-    controls: ["throttle", "rear-brake", "footpegs"],
+    summary: "Lifting the front wheel with the gas alone: close it so the front dips, then open it as the front springs back up.",
     requires: ["rear-brake-cover"],
     strength: [hang(30), plank(60), wallSit(60)],
     kit: {
       protective: AIRBORNE,
       bike: ["Crash cages", "One tooth smaller front sprocket"],
     },
-    progression: [
-      "In first at 15 km/h, roll off and back on to feel the fork compress and rebound",
-      "Time the throttle to the rebound for small lifts",
-      "Hold the throttle steady at the top of a lift instead of rolling off",
-      "Bring every lift down with the rear brake, not by rolling off",
+    sequence: [
+      {
+        inputs: [
+          { control: "throttle", action: "hold steady" },
+          { control: "rear-brake", action: "rest your foot over it" },
+        ],
+        bike: "Rolling in first at 15 km/h",
+        motion: "rolling",
+      },
+      {
+        inputs: [{ control: "throttle", action: "snap closed" }],
+        bike: "The front fork sinks",
+        motion: "rolling",
+        dive: 0.5,
+      },
+      {
+        inputs: [{ control: "throttle", action: "snap wide open as the fork springs back" }],
+        bike: "The front wheel lifts",
+        motion: "rolling",
+        pitch: 18,
+      },
+      {
+        inputs: [
+          { control: "throttle", action: "hold steady" },
+          { control: "footpegs", action: "keep your weight on them, not the handlebars" },
+        ],
+        bike: "The front wheel stays up",
+        motion: "rolling",
+        pitch: 22,
+      },
+      {
+        inputs: [
+          { control: "rear-brake", action: "press" },
+          { control: "throttle", action: "close gently" },
+        ],
+        bike: "The front wheel comes back down",
+        motion: "rolling",
+      },
     ],
-    bailOut: "Press the rear brake. Slowing the rear wheel pitches the front down; rolling off alone is not enough near the balance point.",
+    progression: [
+      "In first at 15 km/h, close the gas and open it again, and feel the front of the bike dip and spring back",
+      "Open the gas right as the front springs back up, for small lifts",
+      "Keep the gas steady at the top of a lift instead of closing it",
+      "Bring every lift down with the rear brake, until it's a habit",
+    ],
+    bailOut: "Press the rear brake. Slowing the rear wheel brings the front down; closing the gas alone isn't enough once the front is high.",
   },
   "clutch-up-wheelie": {
     name: "Clutch-up wheelie",
     family: "wheelies",
-    summary: "Raising the revs with the clutch in and slipping it out fast, so the drive lifts the front wheel.",
-    controls: ["clutch", "throttle", "rear-brake", "footpegs"],
+    summary: "Raising the revs with the clutch pulled in, then letting it out quickly so the jolt of power lifts the front wheel.",
     requires: ["power-wheelie", "friction-zone"],
     strength: [hang(45), plank(60), wallSit(60)],
     kit: {
@@ -154,78 +311,203 @@ const CATALOG: Record<TrickSlug, Omit<Trick, "slug">> = {
       bike: [
         "Crash cages",
         "12 o'clock bar",
-        "Hand-operated rear brake",
+        "Hand-operated rear brake, for when your foot comes off the peg",
         "One tooth smaller front sprocket",
       ],
     },
-    progression: [
-      "In first at walking pace, raise the revs a little and slip the clutch out quickly for small lifts",
-      "Raise the revs in steps until the front comes up without pumping the fork",
-      "Hold a steady height with the throttle, covering the rear brake",
-      "Fit a 12 o'clock bar before practising near the balance point",
+    sequence: [
+      {
+        inputs: [
+          { control: "clutch", action: "pull in" },
+          { control: "throttle", action: "raise the revs" },
+          { control: "rear-brake", action: "rest your foot over it" },
+        ],
+        bike: "Rolling in first at walking pace",
+        motion: "rolling",
+      },
+      {
+        inputs: [{ control: "clutch", action: "let out quickly, about halfway" }],
+        bike: "The front wheel lifts",
+        motion: "rolling",
+        pitch: 25,
+      },
+      {
+        inputs: [
+          { control: "clutch", action: "let out the rest of the way" },
+          { control: "throttle", action: "hold steady" },
+        ],
+        bike: "The front wheel stays up",
+        motion: "rolling",
+        pitch: 30,
+      },
+      {
+        inputs: [
+          { control: "rear-brake", action: "press" },
+          { control: "throttle", action: "close gently" },
+        ],
+        bike: "The front wheel comes back down",
+        motion: "rolling",
+      },
     ],
-    bailOut: "Press the rear brake. Pulling the clutch in cuts drive too, but only the rear brake brings the front down quickly.",
+    progression: [
+      "In first at walking pace, raise the revs a little and let the clutch out quickly for small lifts",
+      "Raise the revs a bit more each time, until the front comes up on its own",
+      "Hold the front up at a steady height with the gas, foot ready on the rear brake",
+      "Fit a 12 o'clock bar before going anywhere near the point where the bike would tip over backwards",
+    ],
+    bailOut: "Press the rear brake. Pulling the clutch in cuts the power too, but only the rear brake brings the front down quickly.",
   },
   stoppie: {
     name: "Stoppie",
     family: "stoppies",
-    summary: "Braking hard on the front at low speed until the rear wheel lifts, pivoting the bike on the front tyre.",
-    controls: ["front-brake", "footpegs"],
+    summary: "Braking hard on the front at low speed until the rear wheel lifts, so the bike balances on its front tyre.",
     requires: ["front-brake-modulation"],
     strength: [hang(30), plank(60), wallSit(60)],
     kit: {
       protective: AIRBORNE,
       bike: [
         "Frame sliders",
-        "ABS that allows the rear to lift, or can be switched off",
+        "ABS that lets the rear wheel lift, or can be switched off",
         "A front tyre in good condition",
       ],
     },
-    progression: [
-      "Hard stops from 30 km/h until the rear goes light",
-      "Knees gripping the tank and arms locked, so your weight stays behind the bars",
-      "Short lifts from 25 km/h, releasing the lever the moment the rear rises",
-      "Hold the lift longer by easing the lever, not by squeezing harder",
+    sequence: [
+      {
+        inputs: [
+          { control: "throttle", action: "close" },
+          { control: "tank", action: "grip hard" },
+        ],
+        bike: "Rolling at 25 km/h",
+        motion: "rolling",
+      },
+      {
+        inputs: [
+          { control: "front-brake", action: "squeeze gently" },
+          { control: "clutch", action: "pull in" },
+        ],
+        bike: "The front fork sinks",
+        motion: "rolling",
+        dive: 0.6,
+      },
+      {
+        inputs: [
+          { control: "front-brake", action: "squeeze harder" },
+          { control: "footpegs", action: "push against them to keep your weight back" },
+        ],
+        bike: "The rear wheel lifts and the bike tips forward over the front tyre",
+        motion: "rolling",
+        dive: 1,
+        pitch: -12,
+      },
+      {
+        inputs: [{ control: "front-brake", action: "let go" }],
+        bike: "The rear wheel drops and the fork rises back up",
+        motion: "rolling",
+      },
     ],
-    bailOut: "Release the front brake. The rear drops as soon as the braking load goes.",
+    progression: [
+      "Stop hard from 30 km/h until you feel the back of the bike go light",
+      "Grip the tank with your knees and keep your arms straight, so your body doesn't slide forward",
+      "From 25 km/h, let the rear lift a few centimetres, then let go of the front brake straight away",
+      "Keep the rear up longer by easing off the front brake slightly, not by squeezing it harder",
+    ],
+    bailOut: "Let go of the front brake. The rear wheel drops as soon as the braking stops.",
   },
   burnout: {
     name: "Burnout",
     family: "slides",
-    summary: "Spinning the rear tyre while the front brake holds the bike still.",
-    controls: ["front-brake", "clutch", "throttle"],
+    summary: "Spinning the rear tyre on the spot while the front brake holds the bike still.",
     requires: ["friction-zone", "front-brake-modulation"],
     strength: [hang(30), wallSit(45)],
     kit: {
       protective: ARMOURED,
-      bike: ["A rear tyre you are prepared to lose", "Short bursts, so the clutch and engine stay cool"],
+      bike: ["A rear tyre you are prepared to wear out", "Short bursts only, so the clutch and engine don't overheat"],
     },
-    progression: [
-      "In first with the front brake held hard, feed the clutch until the bike pushes against the brake",
-      "Raise the revs before feeding the clutch, until the rear tyre breaks traction",
-      "Keep each burst to a few seconds",
-      "Hold the bike straight with your body, not the bars",
+    sequence: [
+      {
+        inputs: [
+          { control: "front-brake", action: "squeeze hard and hold" },
+          { control: "clutch", action: "pull in" },
+        ],
+        bike: "Stopped, in first gear",
+        motion: "still",
+      },
+      {
+        inputs: [
+          { control: "front-brake", action: "keep holding" },
+          { control: "throttle", action: "open to about half" },
+        ],
+        bike: "The revs rise but the bike doesn't move",
+        motion: "still",
+      },
+      {
+        inputs: [
+          { control: "front-brake", action: "keep holding" },
+          { control: "clutch", action: "let out slowly" },
+        ],
+        bike: "The rear tyre spins while the front brake holds the bike in place",
+        motion: "burnout",
+      },
+      {
+        inputs: [
+          { control: "front-brake", action: "keep holding" },
+          { control: "clutch", action: "pull in" },
+          { control: "throttle", action: "close" },
+        ],
+        bike: "The rear tyre stops spinning",
+        motion: "still",
+      },
     ],
-    bailOut: "Pull the clutch in. The rear stops being driven and the front brake keeps the bike where it is.",
+    progression: [
+      "Stopped in first with the front brake held hard, let the clutch out until the bike pushes against the brake, then pull it back in",
+      "Raise the revs first, then let the clutch out until the rear tyre starts to spin",
+      "Keep each burnout to a few seconds",
+      "Keep the bike upright with your body rather than the handlebars",
+    ],
+    bailOut: "Pull the clutch in. The rear tyre stops being driven and the front brake keeps the bike where it is.",
   },
   "rear-brake-slide": {
     name: "Rear-brake slide",
     family: "slides",
-    summary: "Locking the rear wheel so the back steps out, then releasing to straighten up.",
-    controls: ["rear-brake", "clutch"],
+    summary: "Stamping on the rear brake so the rear wheel stops turning and the back of the bike slides out, then letting go of the rear brake to straighten up.",
     requires: ["rear-brake-cover", "friction-zone"],
     strength: [balance(30), plank(45)],
     kit: {
       protective: ARMOURED,
       bike: ["Frame sliders", "Rear ABS switched off, where the bike allows it"],
     },
-    progression: [
-      "On gravel or dirt at walking pace, pull the clutch in and lock the rear",
-      "Let the slide run straight, then release",
-      "Steer slightly into the turn before locking, so the rear steps out",
-      "Release while the bike still points where you are going",
+    sequence: [
+      {
+        inputs: [
+          { control: "throttle", action: "close" },
+          { control: "clutch", action: "pull in" },
+        ],
+        bike: "Rolling on gravel at 20 km/h",
+        motion: "rolling",
+      },
+      {
+        inputs: [{ control: "rear-brake", action: "stamp down and hold" }],
+        bike: "The rear wheel stops turning and skids",
+        motion: "skid",
+      },
+      {
+        inputs: [{ control: "rear-brake", action: "keep holding" }],
+        bike: "The back of the bike swings out to one side, which a side view can't show",
+        motion: "skid",
+      },
+      {
+        inputs: [{ control: "rear-brake", action: "let go while the bike still points straight ahead" }],
+        bike: "The rear tyre grips again and the bike straightens up",
+        motion: "rolling",
+      },
     ],
-    bailOut: "Release the rear brake early, while the bike is still pointed where you are going. Releasing once it is sideways can throw you over the high side.",
+    progression: [
+      "On gravel or dirt at walking pace, pull the clutch in and stamp on the rear brake",
+      "Let the skid run in a straight line, then let go of the rear brake",
+      "Turn slightly before stamping on the brake, so the back swings out",
+      "Make the slides longer only once letting go of the rear brake early feels automatic. Always let go of it before the back swings far out, because if the tyre grips while the bike is sideways it can throw you off",
+    ],
+    bailOut: "Let go of the rear brake early, while the bike still points where you're going. Letting go of the brake once the bike is sideways can throw you off.",
   },
 };
 
