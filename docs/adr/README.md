@@ -23,3 +23,4 @@ editing history — the wrong turns are half of what makes the file worth keepin
 | [0009](./0009-monorepo-for-mobile.md) | Two workspaces, ahead of a mobile app | Implemented — structure only; no mobile app yet |
 | [0010](./0010-domain-and-environments.md) | A domain, and the environments behind it | Partly implemented — production live on the domain; preview environment not provisioned |
 | [0012](./0012-messages-odometer.md) | The odometer — messages get their own instrument | Proposed |
+| [0014](./0014-who-owns-a-row.md) | Who owns a row — ending anonymous writes | Split — waves implemented in `bd6a3b5`; posts proposed |
