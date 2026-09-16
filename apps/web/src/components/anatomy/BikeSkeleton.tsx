@@ -255,9 +255,9 @@ export function BikeSkeleton({
 
             <path d={FOOTPEG} strokeWidth={7} stroke={on("footpegs")} />
             <path d={SHIFTER} strokeWidth={7} strokeDasharray={FAR_SIDE} stroke={on("shifter")} />
-            <path d={PEDAL} strokeWidth={7} stroke={on("rear-brake")} />
+            <path d={PEDAL} strokeWidth={7} stroke={on("rearBrake")} />
             <path d={GRIP} strokeWidth={20} stroke={on("throttle")} />
-            <path d={LEVER} strokeWidth={7} stroke={on("front-brake")} />
+            <path d={LEVER} strokeWidth={7} stroke={on("frontBrake")} />
             {lit.includes("clutch") && (
               <path d={LEVER} strokeWidth={7} strokeDasharray={FAR_SIDE} stroke={on("clutch")} />
             )}

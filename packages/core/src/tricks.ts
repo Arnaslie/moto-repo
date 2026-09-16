@@ -1,8 +1,8 @@
 export const CONTROLS = {
   throttle: { name: "Throttle", by: "Right hand" },
-  "front-brake": { name: "Front brake", by: "Right hand" },
+  frontBrake: { name: "Front brake", by: "Right hand" },
   clutch: { name: "Clutch", by: "Left hand" },
-  "rear-brake": { name: "Rear brake", by: "Right foot" },
+  rearBrake: { name: "Rear brake", by: "Right foot" },
   shifter: { name: "Gear shifter", by: "Left foot" },
   footpegs: { name: "Footpegs", by: "Feet" },
   tank: { name: "Tank", by: "Knees" },
@@ -104,7 +104,7 @@ const CATALOG: Record<TrickSlug, Omit<Trick, "slug">> = {
       {
         inputs: [
           { control: "clutch", action: "pull back in" },
-          { control: "rear-brake", action: "press gently" },
+          { control: "rearBrake", action: "press gently" },
         ],
         bike: "Rolls to a stop",
         motion: "still",
@@ -129,19 +129,19 @@ const CATALOG: Record<TrickSlug, Omit<Trick, "slug">> = {
       {
         inputs: [
           { control: "throttle", action: "hold steady" },
-          { control: "rear-brake", action: "rest your foot over it without pressing" },
+          { control: "rearBrake", action: "rest your foot over it without pressing" },
         ],
         bike: "Rolling at walking pace",
         motion: "rolling",
       },
       {
-        inputs: [{ control: "rear-brake", action: "press lightly" }],
+        inputs: [{ control: "rearBrake", action: "press lightly" }],
         bike: "Slows down and stays level",
         motion: "rolling",
       },
       {
         inputs: [
-          { control: "rear-brake", action: "press firmly" },
+          { control: "rearBrake", action: "press firmly" },
           { control: "clutch", action: "pull in" },
         ],
         bike: "Comes to a stop",
@@ -167,14 +167,14 @@ const CATALOG: Record<TrickSlug, Omit<Trick, "slug">> = {
       {
         inputs: [
           { control: "throttle", action: "close" },
-          { control: "front-brake", action: "rest two fingers on it" },
+          { control: "frontBrake", action: "rest two fingers on it" },
         ],
         bike: "Rolling at 30 km/h",
         motion: "rolling",
       },
       {
         inputs: [
-          { control: "front-brake", action: "squeeze gently" },
+          { control: "frontBrake", action: "squeeze gently" },
           { control: "tank", action: "grip" },
         ],
         bike: "The front fork starts to sink",
@@ -183,7 +183,7 @@ const CATALOG: Record<TrickSlug, Omit<Trick, "slug">> = {
       },
       {
         inputs: [
-          { control: "front-brake", action: "squeeze harder, smoothly" },
+          { control: "frontBrake", action: "squeeze harder, smoothly" },
           { control: "clutch", action: "pull in" },
         ],
         bike: "The fork sinks most of the way and the bike slows hard",
@@ -191,7 +191,7 @@ const CATALOG: Record<TrickSlug, Omit<Trick, "slug">> = {
         dive: 0.85,
       },
       {
-        inputs: [{ control: "front-brake", action: "ease off as the bike stops" }],
+        inputs: [{ control: "frontBrake", action: "ease off as the bike stops" }],
         bike: "Stops, and the fork rises back up",
         motion: "still",
       },
@@ -216,20 +216,20 @@ const CATALOG: Record<TrickSlug, Omit<Trick, "slug">> = {
         inputs: [
           { control: "clutch", action: "hold where it starts to pull" },
           { control: "throttle", action: "hold a little gas" },
-          { control: "rear-brake", action: "drag lightly" },
+          { control: "rearBrake", action: "drag lightly" },
         ],
         bike: "Walking pace, handlebars turned all the way",
         motion: "rolling",
       },
       {
-        inputs: [{ control: "rear-brake", action: "press a little more" }],
+        inputs: [{ control: "rearBrake", action: "press a little more" }],
         bike: "Slows and tightens the turn",
         motion: "rolling",
       },
       {
         inputs: [
           { control: "clutch", action: "let out a touch" },
-          { control: "rear-brake", action: "ease off" },
+          { control: "rearBrake", action: "ease off" },
         ],
         bike: "Stands itself back up if it starts leaning into the turn",
         motion: "rolling",
@@ -257,7 +257,7 @@ const CATALOG: Record<TrickSlug, Omit<Trick, "slug">> = {
       {
         inputs: [
           { control: "throttle", action: "hold steady" },
-          { control: "rear-brake", action: "rest your foot over it" },
+          { control: "rearBrake", action: "rest your foot over it" },
         ],
         bike: "Rolling in first at 15 km/h",
         motion: "rolling",
@@ -285,7 +285,7 @@ const CATALOG: Record<TrickSlug, Omit<Trick, "slug">> = {
       },
       {
         inputs: [
-          { control: "rear-brake", action: "press" },
+          { control: "rearBrake", action: "press" },
           { control: "throttle", action: "close gently" },
         ],
         bike: "The front wheel comes back down",
@@ -320,7 +320,7 @@ const CATALOG: Record<TrickSlug, Omit<Trick, "slug">> = {
         inputs: [
           { control: "clutch", action: "pull in" },
           { control: "throttle", action: "raise the revs" },
-          { control: "rear-brake", action: "rest your foot over it" },
+          { control: "rearBrake", action: "rest your foot over it" },
         ],
         bike: "Rolling in first at walking pace",
         motion: "rolling",
@@ -342,7 +342,7 @@ const CATALOG: Record<TrickSlug, Omit<Trick, "slug">> = {
       },
       {
         inputs: [
-          { control: "rear-brake", action: "press" },
+          { control: "rearBrake", action: "press" },
           { control: "throttle", action: "close gently" },
         ],
         bike: "The front wheel comes back down",
@@ -382,7 +382,7 @@ const CATALOG: Record<TrickSlug, Omit<Trick, "slug">> = {
       },
       {
         inputs: [
-          { control: "front-brake", action: "squeeze gently" },
+          { control: "frontBrake", action: "squeeze gently" },
           { control: "clutch", action: "pull in" },
         ],
         bike: "The front fork sinks",
@@ -391,7 +391,7 @@ const CATALOG: Record<TrickSlug, Omit<Trick, "slug">> = {
       },
       {
         inputs: [
-          { control: "front-brake", action: "squeeze harder" },
+          { control: "frontBrake", action: "squeeze harder" },
           { control: "footpegs", action: "push against them to keep your weight back" },
         ],
         bike: "The rear wheel lifts and the bike tips forward over the front tyre",
@@ -400,7 +400,7 @@ const CATALOG: Record<TrickSlug, Omit<Trick, "slug">> = {
         pitch: -12,
       },
       {
-        inputs: [{ control: "front-brake", action: "let go" }],
+        inputs: [{ control: "frontBrake", action: "let go" }],
         bike: "The rear wheel drops and the fork rises back up",
         motion: "rolling",
       },
@@ -426,7 +426,7 @@ const CATALOG: Record<TrickSlug, Omit<Trick, "slug">> = {
     sequence: [
       {
         inputs: [
-          { control: "front-brake", action: "squeeze hard and hold" },
+          { control: "frontBrake", action: "squeeze hard and hold" },
           { control: "clutch", action: "pull in" },
         ],
         bike: "Stopped, in first gear",
@@ -434,7 +434,7 @@ const CATALOG: Record<TrickSlug, Omit<Trick, "slug">> = {
       },
       {
         inputs: [
-          { control: "front-brake", action: "keep holding" },
+          { control: "frontBrake", action: "keep holding" },
           { control: "throttle", action: "open to about half" },
         ],
         bike: "The revs rise but the bike doesn't move",
@@ -442,7 +442,7 @@ const CATALOG: Record<TrickSlug, Omit<Trick, "slug">> = {
       },
       {
         inputs: [
-          { control: "front-brake", action: "keep holding" },
+          { control: "frontBrake", action: "keep holding" },
           { control: "clutch", action: "let out slowly" },
         ],
         bike: "The rear tyre spins while the front brake holds the bike in place",
@@ -450,7 +450,7 @@ const CATALOG: Record<TrickSlug, Omit<Trick, "slug">> = {
       },
       {
         inputs: [
-          { control: "front-brake", action: "keep holding" },
+          { control: "frontBrake", action: "keep holding" },
           { control: "clutch", action: "pull in" },
           { control: "throttle", action: "close" },
         ],
@@ -486,17 +486,17 @@ const CATALOG: Record<TrickSlug, Omit<Trick, "slug">> = {
         motion: "rolling",
       },
       {
-        inputs: [{ control: "rear-brake", action: "stamp down and hold" }],
+        inputs: [{ control: "rearBrake", action: "stamp down and hold" }],
         bike: "The rear wheel stops turning and skids",
         motion: "skid",
       },
       {
-        inputs: [{ control: "rear-brake", action: "keep holding" }],
+        inputs: [{ control: "rearBrake", action: "keep holding" }],
         bike: "The back of the bike swings out to one side, which a side view can't show",
         motion: "skid",
       },
       {
-        inputs: [{ control: "rear-brake", action: "let go while the bike still points straight ahead" }],
+        inputs: [{ control: "rearBrake", action: "let go while the bike still points straight ahead" }],
         bike: "The rear tyre grips again and the bike straightens up",
         motion: "rolling",
       },

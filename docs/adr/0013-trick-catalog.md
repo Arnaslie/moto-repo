@@ -47,7 +47,7 @@ app and a future mobile app read the same file. Nothing in this record needs
 the database.
 
 ```ts
-type Control = "throttle" | "front-brake" | "clutch" | "rear-brake" | "shifter" | "footpegs" | "tank";
+type Control = "throttle" | "frontBrake" | "clutch" | "rearBrake" | "shifter" | "footpegs" | "tank";
 
 type Trick = {
   slug: string;
