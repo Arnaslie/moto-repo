@@ -65,7 +65,6 @@ the demo riders.
 | `SESSION_SECRET` | `src/lib/session.ts` | runtime |
 | `BLOB_READ_WRITE_TOKEN` | `src/lib/uploads.ts` | runtime (unset = disk) |
 | `BLOB_STORE_ID` | `src/lib/uploads.ts` | runtime (optional override) |
-| `NEXT_PUBLIC_ALLOW_ANONYMOUS_WAVES` | `src/lib/waves.ts` | **build** |
 | `NODE_ENV` | `src/lib/prisma.ts`, `src/lib/session.ts` | set automatically |
 
 `DATABASE_URL_UNPOOLED` is not optional. Prisma resolves every `env()` in the
@@ -79,12 +78,8 @@ no pooler in front, set it to the same string. `BLOB_STORE_ID` only exists to
 override the store id that `src/lib/uploads.ts` otherwise parses out of the
 read-write token — leave it unset unless the two ever diverge.
 
-The waves flag is the one to watch: `NEXT_PUBLIC_` means Next inlines it into
-the client bundle during `next build`, so it has to be set in the host's
-**build** environment. Setting it only as a runtime var leaves the button
-hidden, and flipping it later does nothing until you rebuild. `NODE_ENV` is
-worth a glance too — it's what puts `secure` on the session cookie, so the app
-must be built and started in production mode behind HTTPS.
+`NODE_ENV` is worth a glance — it's what puts `secure` on the session cookie, so
+the app must be built and started in production mode behind HTTPS.
 
 ---
 
@@ -170,8 +165,6 @@ Blob enforces both.
   schema load, before it ever reaches the database.
 - `SESSION_SECRET` — 32+ char random string
   (`node -e "console.log(require('crypto').randomBytes(24).toString('hex'))"`)
-- `NEXT_PUBLIC_ALLOW_ANONYMOUS_WAVES` — only if guests should be able to wave.
-  Must be present for the **build**, and a redeploy is required to change it.
 - `BLOB_READ_WRITE_TOKEN` — added automatically when you connect a Blob store;
   you shouldn't need to set it by hand.
 
@@ -196,8 +189,7 @@ than the SQLite file on a volume it got for free before. Reverting would mean
 putting `provider = "sqlite"` back and regenerating the migrations again.
 
 - Provision Postgres and set `DATABASE_URL` to it.
-- Set `SESSION_SECRET`, and `NEXT_PUBLIC_ALLOW_ANONYMOUS_WAVES` at build time
-  if guests should wave.
+- Set `SESSION_SECRET`.
 - Attach a volume for `./uploads/`, or set a Blob token and skip the volume.
 - Run `prisma migrate deploy` on boot/release.
 - If containerizing, `output: "standalone"` in `next.config.ts` gives a much
@@ -225,7 +217,3 @@ us, which is what Prisma was chosen for in the first place.
 What's left is configuration, not code: a pooled `DATABASE_URL`, a
 `prisma migrate deploy` step on release, and a Blob store connected to the
 project.
-
-Not a swap point, but deploy-relevant: `src/lib/waves.ts` reads the temporary
-anonymous-waves flag. When that experiment ends, the variable disappears from
-the host config along with the code.

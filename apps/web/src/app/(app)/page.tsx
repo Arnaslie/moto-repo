@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { Feed } from "@/components/Feed";
-import { getCurrentUser, getWaveViewer } from "@/lib/session";
+import { getCurrentUser } from "@/lib/session";
 import { postInclude, serializePost } from "@/lib/posts";
 import { blobUploadsEnabled } from "@/lib/uploads";
 
@@ -13,7 +13,7 @@ export default async function Home() {
 
   const rows = await prisma.post.findMany({
     orderBy: { createdAt: "desc" },
-    include: postInclude(await getWaveViewer(user)),
+    include: postInclude(user?.id ?? null),
   });
 
   const initialPosts = rows.map(serializePost);
