@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getCurrentUser, getWaveViewer } from "@/lib/session";
+import { getCurrentUser } from "@/lib/session";
 import { isValidUploadUrl } from "@/lib/uploads";
 import { postInclude, serializePost } from "@/lib/posts";
 
@@ -11,7 +11,7 @@ export async function GET() {
   const viewer = await getCurrentUser();
   const rows = await prisma.post.findMany({
     orderBy: { createdAt: "desc" },
-    include: postInclude(await getWaveViewer(viewer)),
+    include: postInclude(viewer?.id ?? null),
   });
   return NextResponse.json({ posts: rows.map(serializePost) });
 }
@@ -81,7 +81,7 @@ export async function POST(request: Request) {
       imageUrl: resolvedImageUrl,
       userId: currentUser?.id ?? null,
     },
-    include: postInclude(await getWaveViewer(currentUser)),
+    include: postInclude(currentUser?.id ?? null),
   });
 
   return NextResponse.json({ post: serializePost(post) }, { status: 201 });

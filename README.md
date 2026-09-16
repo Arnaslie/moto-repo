@@ -14,9 +14,8 @@ styled with Tailwind CSS.
 - **Waves** — this app's like, drawn as the two-finger salute riders give each other on the
   road: an outlined hand that fills orange and tips left-right when you wave. One wave per
   rider per post, enforced by a unique pair in the database, so a double tap can't inflate
-  the count. Waving normally requires an account, but
-  `NEXT_PUBLIC_ALLOW_ANONYMOUS_WAVES` temporarily opens it to signed-out visitors, who
-  wave under a random id kept in a cookie. The tally is public either way.
+  the count. Waving requires an account, though the tally itself is public, so signed-out
+  visitors still see it.
 - **Comment ticker** — comments run along the bottom of each post as an ESPN-style
   broadcast bottom line, crawling right-to-left. Click the strip to freeze it and expand
   the full thread with a reply box. Commenting requires an account.
@@ -46,8 +45,8 @@ styled with Tailwind CSS.
   conversations and opens a panel holding both, newest first; there's no separate page. They
   ride the 20-second poll the badge already ran rather than a stream, so a wave can be a tick
   late — deliberately, see [docs/adr/0007](./docs/adr/0007-notifications-polled.md). Both
-  ends are accounts: an anonymous wave still lands and still counts, it just notifies nobody.
-  One wave notification per rider per post, ever, so un-waving and re-waving doesn't nag.
+  ends are accounts. One wave notification per rider per post, ever, so un-waving and
+  re-waving doesn't nag.
 - **Image uploads** — straight from the browser to Vercel Blob in production, to a private
   local directory in dev (see [Uploads](#uploads) below).
 
@@ -101,7 +100,6 @@ catalog-only and mints no accounts.
 | `DATABASE_URL_UNPOOLED`              | The **direct** endpoint, dialed by migrations only. Still required locally — every `prisma migrate` command fails with `P1012` if it's unset. Against a plain local Postgres, set it to the same value as `DATABASE_URL` |
 | `SESSION_SECRET`                     | Cookie encryption key, **must be ≥ 32 characters** or startup throws |
 | `BLOB_READ_WRITE_TOKEN`              | Optional. Set (Vercel adds it once a Blob store is connected) and uploads go to Blob; unset and they go to disk. Read at runtime, so switching needs no rebuild |
-| `NEXT_PUBLIC_ALLOW_ANONYMOUS_WAVES`  | Optional. `"true"` lets signed-out visitors wave; unset requires an account. Inlined at build time |
 
 ## Stack
 
@@ -164,7 +162,7 @@ src/
     prisma.ts · session.ts · uploads.ts · thread.ts   # server-only
     auth.ts · comments.ts · conversations.ts · drivetrain.ts · format.ts
     gear.ts · locations.ts · messages.ts · motorcycles.ts · posts.ts
-    types.ts · waves.ts
+    types.ts
 prisma/
   schema.prisma                  # Post, Wave, Comment, User, GearItem, UserGear,
                                  #   Motorcycle, Location, Room, Conversation,
@@ -185,7 +183,7 @@ computed on the server too, so its resting state ships in the HTML.
 | Model        | What it holds                                                          |
 | ------------ | ---------------------------------------------------------------------- |
 | `Post`       | Author, content, optional `imageUrl`, optional link to a `User`        |
-| `Wave`       | A wave on a post — from a `User`, or a cookie `guestId` when anonymous |
+| `Wave`       | A wave on a post — always tied to a real `User`                        |
 | `Comment`    | A reply on a post — always tied to a real `User`                       |
 | `User`       | Email, handle, password hash, bio, avatar skin tone                    |
 | `GearItem`   | Cosmetic catalog entry — slot, name, brand, rarity, SVG asset key      |

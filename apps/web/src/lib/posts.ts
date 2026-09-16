@@ -1,7 +1,6 @@
 import type { Comment, Post, PostAuthorAvatar } from "@moto/core/types";
 import type { SlotKey } from "@moto/core/gear";
 import { TICKER_COMMENT_LIMIT } from "@moto/core/comments";
-import type { WaveViewer } from "./waves";
 
 // The author fields an Avatar needs, and nothing else. Shared by posts and
 // comments.
@@ -34,20 +33,18 @@ export const commentSelect = {
   user: { select: authorSelect },
 } as const;
 
-// Matches the one wave this viewer could have left. An account wins over a
-// guest cookie; with neither, `id: ""` matches nothing (cuids are never empty).
-function viewerWaveFilter(viewer?: WaveViewer | null) {
-  if (viewer?.userId) return { userId: viewer.userId };
-  if (viewer?.guestId) return { guestId: viewer.guestId };
-  return { id: "" };
+// Matches the one wave this viewer could have left. Signed out, `id: ""` matches
+// nothing (cuids are never empty).
+function viewerWaveFilter(viewerId: string | null) {
+  return viewerId ? { userId: viewerId } : { id: "" };
 }
 
 // Shared so every query that feeds serializePost() selects the same shape.
 //
 // Viewer-specific, unlike the other includes here: whether a post is already
-// waved at depends on who's asking, so callers pass what getWaveViewer() hands
-// them (or nothing, for readers with neither an account nor a guest id).
-export function postInclude(viewer?: WaveViewer | null) {
+// waved at depends on who's asking, so callers pass the signed-in rider's id, or
+// null for a signed-out reader.
+export function postInclude(viewerId: string | null) {
   return {
     user: { select: authorSelect },
     // Comments ride along with the post so the ticker can render immediately,
@@ -58,11 +55,11 @@ export function postInclude(viewer?: WaveViewer | null) {
       orderBy: { createdAt: "desc" },
       select: commentSelect,
     },
-    // At most one row, given the unique pairs on Wave. A reader with no
-    // identity gets a filter that can never match, which keeps this one query
-    // shape instead of two.
+    // At most one row, given the unique pair on Wave. A signed-out reader gets a
+    // filter that can never match, which keeps this one query shape instead of
+    // two.
     waves: {
-      where: viewerWaveFilter(viewer),
+      where: viewerWaveFilter(viewerId),
       select: { id: true },
     },
     _count: { select: { comments: true, waves: true } },
