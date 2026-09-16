@@ -217,3 +217,42 @@ body {
     transition: none;
   }
 }
+
+@keyframes bike-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes bike-ground {
+  to {
+    stroke-dashoffset: 600;
+  }
+}
+
+.bike-pose {
+  transform-box: view-box;
+  transition:
+    transform 700ms ease-in-out,
+    transform-origin 700ms ease-in-out;
+}
+
+.bike-spin {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: bike-spin var(--spin) linear infinite;
+}
+
+.bike-ground {
+  animation: bike-ground var(--ground) linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bike-pose {
+    transition: none;
+  }
+  .bike-spin,
+  .bike-ground {
+    animation-play-state: paused !important;
+  }
+}

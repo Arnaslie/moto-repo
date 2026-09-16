@@ -38,6 +38,22 @@ export const onFork = (h: number): Pt => ({
   h,
 });
 
+export const FORK_TRAVEL = 130;
+
+export function forkDive(share: number) {
+  const s = FORK_TRAVEL * share;
+  const shift = { x: AXIS_UP.x * s, h: AXIS_UP.h * s };
+  const v = { x: FRONT_AXLE.x + shift.x - REAR_AXLE.x, h: FRONT_AXLE.h + shift.h - REAR_AXLE.h };
+  const theta = Math.asin((R_FRONT - R_REAR) / Math.hypot(v.x, v.h)) - Math.atan2(v.h, v.x);
+  const cos = Math.cos(theta);
+  const sin = Math.sin(theta);
+  return {
+    theta,
+    shift,
+    axle: { x: REAR_AXLE.x + v.x * cos - v.h * sin, h: REAR_AXLE.h + v.x * sin + v.h * cos },
+  };
+}
+
 export const STEERING_HEAD = onAxis(880);
 export const YOKE_TOP = onAxis(985);
 

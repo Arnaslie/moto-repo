@@ -207,7 +207,7 @@ export type Gear = {
  * because an intercom is what you're in once you've stopped moving. Sixth is
  * the cruising gear, so it's you.
  *
- * Gear 3 is Fit (ADR 0006) and gear 4 is Anatomy (ADR 0008); Garage is still
+ * Gear 3 is Fit (ADR 0006) and gear 4 is Tricks (ADR 0013); Garage is still
  * unplaced and has no blank left to take.
  */
 export function gearsFor(handle: string | null): Gear[] {
@@ -215,7 +215,7 @@ export function gearsFor(handle: string | null): Gear[] {
     { n: 1, label: "Feed", href: "/" },
     { n: 2, label: "Riders", href: "/riders" },
     { n: 3, label: "Fit", href: "/fit" },
-    { n: 4, label: "Anatomy", href: "/anatomy" },
+    { n: 4, label: "Tricks", href: "/tricks" },
     { n: 5, label: "Comms", href: "/comms" },
     { n: 6, label: "Profile", href: handle ? `/profile/${handle}` : null, auth: true },
   ];
