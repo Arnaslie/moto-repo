@@ -49,6 +49,9 @@
   --chalk-draft: #f97316;
   --chalk-tip-bg: rgba(255, 255, 255, 0.92);
   --chalk-tip-text: #171717;
+  --odo-ground: rgba(23, 23, 27, 0.05);
+  --odo-ghost: rgba(23, 23, 27, 0.11);
+  --odo-lit: rgba(23, 23, 27, 0.58);
 }
 
 /* The pod filter in the wordmark. The brand orange carries both schemes the
@@ -89,6 +92,9 @@
     --chalk-draft: #fb923c;
     --chalk-tip-bg: rgba(12, 12, 14, 0.9);
     --chalk-tip-text: #ededed;
+    --odo-ground: rgba(255, 255, 255, 0.06);
+    --odo-ghost: rgba(237, 237, 237, 0.13);
+    --odo-lit: rgba(237, 237, 237, 0.62);
   }
 }
 
@@ -254,4 +260,69 @@ body {
 
 .leaflet-tooltip.chalk-tip::before {
   display: none;
+.odo-ground {
+  fill: var(--odo-ground);
+  stroke: none;
+}
+
+.odo-ghost {
+  fill: var(--odo-ghost);
+}
+
+.odo-lit {
+  fill: var(--odo-lit);
+  transition: fill 140ms ease-out;
+}
+
+.odo[data-waiting="true"] .odo-lit {
+  fill: #f97316;
+}
+
+.odo:hover .odo-lit {
+  fill: #f97316;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .odo-lit {
+    transition: none;
+  }
+}
+
+@keyframes bike-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes bike-ground {
+  to {
+    stroke-dashoffset: 600;
+  }
+}
+
+.bike-pose {
+  transform-box: view-box;
+  transition:
+    transform 700ms ease-in-out,
+    transform-origin 700ms ease-in-out;
+}
+
+.bike-spin {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: bike-spin var(--spin) linear infinite;
+}
+
+.bike-ground {
+  animation: bike-ground var(--ground) linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bike-pose {
+    transition: none;
+  }
+  .bike-spin,
+  .bike-ground {
+    animation-play-state: paused !important;
+  }
 }

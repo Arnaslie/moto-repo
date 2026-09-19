@@ -1,4 +1,6 @@
+import type { CSSProperties } from "react";
 import * as A from "@moto/core/anatomy";
+import type { Control, Motion } from "@moto/core/tricks";
 
 const { Y, poly, blob } = A;
 const f = (n: number) => n.toFixed(1);
@@ -117,6 +119,11 @@ const FOOTPEG = poly([{ x: 702, h: 406 }, { x: 634, h: 392 }, { x: 610, h: 358 }
 
 const BAR = poly([A.onAxis(1000), { x: 960, h: 1058 }, { x: 876, h: 1072 }, { x: 800, h: 1076 }]);
 
+const GRIP = poly([{ x: 876, h: 1072 }, { x: 800, h: 1076 }]);
+const LEVER = poly([{ x: 900, h: 1056 }, { x: 860, h: 1040 }, { x: 790, h: 1034 }]);
+const PEDAL = poly([{ x: 640, h: 380 }, { x: 740, h: 372 }, { x: 772, h: 390 }]);
+const SHIFTER = poly([{ x: 716, h: 432 }, { x: 772, h: 424 }, { x: 794, h: 444 }]);
+
 const yoke = (h: number, half: number) => {
   const c = A.onAxis(h);
   const nx = Math.cos((A.RAKE_DEG * Math.PI) / 180);
@@ -143,155 +150,135 @@ const FENDER = blob([
   { x: 1528, h: 604 }, { x: 1400, h: 640 }, { x: 1280, h: 608 },
 ], 0.35);
 
-type Label = { name: string; note?: string; at: A.Pt; to: A.Pt; anchor: "start" | "middle" | "end" };
+const ROLL_S = 1.6;
+const BURNOUT_S = 0.3;
+const DASH_PERIOD = 600;
+const FRONT_S = (ROLL_S * A.R_FRONT) / A.R_REAR;
+const GROUND_S = (DASH_PERIOD * ROLL_S) / (2 * Math.PI * A.R_REAR);
 
-const LABELS: Label[] = [
-  { name: "Seat", note: "805 mm", at: { x: 500, h: 807 }, to: { x: 300, h: 1240 }, anchor: "middle" },
-  { name: "Handlebar", at: { x: 876, h: 1072 }, to: { x: 690, h: 1240 }, anchor: "middle" },
-  { name: "Fuel tank", at: { x: 950, h: 926 }, to: { x: 1030, h: 1240 }, anchor: "middle" },
-  { name: "Frame", note: "steel diamond", at: { x: 706, h: 696 }, to: { x: 1400, h: 1240 }, anchor: "middle" },
-  { name: "Steering head", note: "rake 24.5°", at: A.STEERING_HEAD, to: { x: 1760, h: 1240 }, anchor: "middle" },
+const VIEWS = {
+  level: { x: -380, w: 2140, top: 1180 },
+  front: { x: -380, w: 2140, top: 1450 },
+  rear: { x: -600, w: 2200, top: 1600 },
+} as const;
+const VIEW_BOTTOM = -60;
 
-  { name: "Top yoke", note: "42 mm offset", at: A.YOKE_TOP, to: { x: 2010, h: 1090 }, anchor: "start" },
-  { name: "Headlight", at: { x: 1290, h: 946 }, to: { x: 2010, h: 940 }, anchor: "start" },
-  { name: "Fork stanchion", note: "41 mm", at: A.onFork(800), to: { x: 2010, h: 790 }, anchor: "start" },
-  { name: "Fork slider", at: A.onFork(470), to: { x: 2010, h: 640 }, anchor: "start" },
-  { name: "Brake caliper", at: { x: 1330, h: 420 }, to: { x: 2010, h: 490 }, anchor: "start" },
-  { name: "Brake rotor", note: "282 mm", at: { x: 1500, h: 200 }, to: { x: 2010, h: 340 }, anchor: "start" },
-  { name: "Front axle", at: A.FRONT_AXLE, to: { x: 2010, h: 190 }, anchor: "start" },
-  { name: "Front tyre", note: "120/70-17", at: { x: 1666, h: 214 }, to: { x: 2010, h: 40 }, anchor: "start" },
+const GROUND = `M -700 ${Y(0)} L 1800 ${Y(0)}`;
+const FAR_SIDE = "16 14";
 
-  { name: "Tail light", at: { x: -288, h: 848 }, to: { x: -840, h: 1050 }, anchor: "end" },
-  { name: "Subframe", at: { x: 420, h: 716 }, to: { x: -840, h: 900 }, anchor: "end" },
-  { name: "Rear shock", note: "monoshock", at: { x: 582, h: 490 }, to: { x: -840, h: 750 }, anchor: "end" },
-  { name: "Chain", note: "525", at: { x: 330, h: 408 }, to: { x: -840, h: 600 }, anchor: "end" },
-  { name: "Rear sprocket", note: "43T", at: { x: -74, h: 392 }, to: { x: -840, h: 450 }, anchor: "end" },
-  { name: "Rear tyre", note: "180/55-17", at: { x: -302, h: 262 }, to: { x: -840, h: 300 }, anchor: "end" },
+const origin = (p: A.Pt) => `${f(p.x)}px ${f(Y(p.h))}px`;
 
-    { name: "Swingarm", at: { x: 250, h: 300 }, to: { x: -200, h: -350 }, anchor: "middle" },
-  { name: "Muffler", at: { x: 520, h: 168 }, to: { x: 210, h: -170 }, anchor: "middle" },
-  { name: "Swingarm pivot", at: A.PIVOT, to: { x: 560, h: -350 }, anchor: "middle" },
-  { name: "Footpeg", at: { x: 664, h: 396 }, to: { x: 880, h: -170 }, anchor: "middle" },
-  { name: "Crankcase", at: { x: 800, h: 300 }, to: { x: 1160, h: -350 }, anchor: "middle" },
-  { name: "Exhaust header", at: { x: 1010, h: 284 }, to: { x: 1500, h: -170 }, anchor: "middle" },
-  { name: "Radiator", at: { x: 1140, h: 500 }, to: { x: 1860, h: -350 }, anchor: "middle" },
-];
+const turning = (seconds: number, running: boolean, name: "--spin" | "--ground"): CSSProperties =>
+  ({ [name]: `${seconds}s`, animationPlayState: running ? "running" : "paused" }) as CSSProperties;
 
-function Leader({ l }: { l: Label }) {
-  const dx = l.at.x - l.to.x;
-  const dh = l.at.h - l.to.h;
-  const len = Math.hypot(dx, dh);
-  const ux = dx / len, uh = dh / len;
-  const pad = l.anchor === "middle" ? 46 : 30;
-  const x1 = l.to.x + ux * pad + (l.anchor === "start" ? -14 : l.anchor === "end" ? 14 : 0);
-  const h1 = l.to.h + uh * pad;
-  return (
-    <line
-      x1={f(x1)} y1={f(Y(h1))}
-      x2={f(l.at.x - ux * 14)} y2={f(Y(l.at.h - uh * 14))}
-      markerEnd="url(#anat-arrow)"
-    />
-  );
-}
+export type Pose = { pitch: number; dive: number; motion: Motion };
 
-export function BikeSkeleton() {
+export function BikeSkeleton({
+  pose,
+  lit,
+  lift,
+}: {
+  pose: Pose;
+  lit: Control[];
+  lift: keyof typeof VIEWS;
+}) {
+  const dive = A.forkDive(pose.dive);
+  const on = (c: Control) => (lit.includes(c) ? "var(--anat-line)" : undefined);
+  const { motion } = pose;
+  const view = VIEWS[lift];
+
   return (
     <svg
-      viewBox="-1400 -80 3900 1800"
+      viewBox={`${view.x} ${Y(view.top)} ${view.w} ${view.top - VIEW_BOTTOM}`}
       className="block h-auto w-full select-none"
       role="img"
-      aria-label="Side view of a naked motorcycle with its major parts labelled"
+      aria-label="Side view of a motorcycle playing the trick's sequence"
     >
-      <defs>
-        <marker
-          id="anat-arrow" markerUnits="userSpaceOnUse"
-          markerWidth={26} markerHeight={26} refX={13} refY={6.5} orient="auto"
+      <g fill="none" stroke="var(--anat-lead)" strokeWidth={9} strokeLinecap="round" strokeLinejoin="round">
+        <path
+          d={GROUND}
+          className="bike-ground"
+          strokeWidth={6}
+          strokeDasharray={`${DASH_PERIOD * 0.4} ${DASH_PERIOD * 0.6}`}
+          style={turning(GROUND_S, motion === "rolling" || motion === "skid", "--ground")}
+        />
+
+        <g
+          className="bike-pose"
+          style={{
+            transform: `rotate(${-pose.pitch}deg)`,
+            transformOrigin: origin(lift === "rear" ? A.REAR_AXLE : dive.axle),
+          }}
         >
-          <path d="M 0 0 L 13 6.5 L 0 13" fill="none"
-            stroke="var(--anat-lead)" strokeWidth={2.2}
-            strokeLinecap="round" strokeLinejoin="round" />
-        </marker>
-      </defs>
-
-      {}
-      <g fill="none" stroke="var(--anat-line)" strokeLinecap="round" strokeLinejoin="round">
-        <g strokeWidth={9}>
-          <Wheel at={A.REAR_AXLE} r={A.R_REAR} phase={0.35} />
-          <Wheel at={A.FRONT_AXLE} r={A.R_FRONT} phase={0.1} />
-        </g>
-
-        <g strokeWidth={5} opacity={0.85}>
-          <circle cx={A.FRONT_AXLE.x} cy={Y(A.FRONT_AXLE.h)} r={A.R_DISC_F} />
-          <circle cx={A.REAR_AXLE.x} cy={Y(A.REAR_AXLE.h)} r={A.R_DISC_R} />
-          <circle cx={A.COUNTERSHAFT.x} cy={Y(A.COUNTERSHAFT.h)} r={A.R_SPKT_F} />
-          <circle cx={A.REAR_AXLE.x} cy={Y(A.REAR_AXLE.h)} r={A.R_SPKT_R} />
-        </g>
-
-        <g strokeWidth={9}>
-          <path d={SWINGARM} />
-          <path d={CHAIN} />
-          <path d={SPRING} strokeWidth={6} />
-          <path d={LINKAGE} strokeWidth={6} />
-          <path d={poly([A.PIVOT, SHOCK_TOP])} strokeWidth={6} />
-
-          <path d={CASES} />
-          <path d={BARREL} />
-          <path d={HEAD} />
-          <path d={RADIATOR} strokeWidth={5} />
-          <path d={EXHAUST} strokeWidth={7} />
-          <path d={MUFFLER} />
-          <path d={FOOTPEG} strokeWidth={7} />
-
-          <path d={FRAME_VISIBLE} />
-          <path d={SUBFRAME} strokeWidth={6} />
-
-          <path d={TANK} />
-          <path d={SEAT} />
-          <path d={TAIL} />
-          <path d={HEADLIGHT} strokeWidth={7} />
-
-          <path d={FORK_SLIDER} strokeWidth={13} />
-          <path d={FORK_STANCHION} strokeWidth={8} />
-          <path d={yoke(985, 92)} strokeWidth={11} />
-          <path d={yoke(838, 86)} strokeWidth={11} />
-          <path d={BAR} strokeWidth={8} />
-          <path d={CALIPER} strokeWidth={6} />
-          <path d={FENDER} strokeWidth={6} />
-
-          {}
-          <g strokeWidth={6} opacity={0.5}>
-            <path d={`M -170 ${Y(0)} L 170 ${Y(0)}`} />
-            <path d={`M 1235 ${Y(0)} L 1565 ${Y(0)}`} />
+          <g
+            className="bike-spin"
+            style={turning(motion === "burnout" ? BURNOUT_S : ROLL_S, motion === "rolling" || motion === "burnout", "--spin")}
+          >
+            <Wheel at={A.REAR_AXLE} r={A.R_REAR} phase={0.35} />
           </g>
-        </g>
-      </g>
 
-      {}
-      <g>
-        {LABELS.map((l) => (
-          <g key={l.name} className="group">
-            <g
-              fill="none" stroke="var(--anat-lead)" strokeWidth={2.6}
-              className="transition-opacity group-hover:opacity-100" opacity={0.75}
-            >
-              <Leader l={l} />
+          <g
+            className="bike-pose"
+            style={{ transform: `rotate(${(-dive.theta * 180) / Math.PI}deg)`, transformOrigin: origin(A.REAR_AXLE) }}
+          >
+            <g strokeWidth={5} opacity={0.85}>
+              <circle cx={A.REAR_AXLE.x} cy={Y(A.REAR_AXLE.h)} r={A.R_DISC_R} />
+              <circle cx={A.COUNTERSHAFT.x} cy={Y(A.COUNTERSHAFT.h)} r={A.R_SPKT_F} />
+              <circle cx={A.REAR_AXLE.x} cy={Y(A.REAR_AXLE.h)} r={A.R_SPKT_R} />
             </g>
-            <text
-              x={l.to.x} y={Y(l.to.h)} textAnchor={l.anchor}
-              className="fill-[var(--anat-text)] text-[38px] font-semibold uppercase tracking-[0.08em]"
-            >
-              {l.name}
-            </text>
-            {l.note && (
-              <text
-                x={l.to.x} y={Y(l.to.h) + 42} textAnchor={l.anchor}
-                className="fill-[var(--anat-note)] font-mono text-[30px] tabular-nums"
-              >
-                {l.note}
-              </text>
+
+            <path d={SWINGARM} />
+            <path d={CHAIN} />
+            <path d={SPRING} strokeWidth={6} />
+            <path d={LINKAGE} strokeWidth={6} />
+            <path d={poly([A.PIVOT, SHOCK_TOP])} strokeWidth={6} />
+
+            <path d={CASES} />
+            <path d={BARREL} />
+            <path d={HEAD} />
+            <path d={RADIATOR} strokeWidth={5} />
+            <path d={EXHAUST} strokeWidth={7} />
+            <path d={MUFFLER} />
+
+            <path d={FRAME_VISIBLE} />
+            <path d={SUBFRAME} strokeWidth={6} />
+
+            <path d={TANK} stroke={on("tank")} />
+            <path d={SEAT} />
+            <path d={TAIL} />
+            <path d={HEADLIGHT} strokeWidth={7} />
+
+            <path d={FORK_STANCHION} strokeWidth={8} />
+            <path d={yoke(985, 92)} strokeWidth={11} />
+            <path d={yoke(838, 86)} strokeWidth={11} />
+            <path d={BAR} strokeWidth={8} />
+
+            <path d={FOOTPEG} strokeWidth={7} stroke={on("footpegs")} />
+            <path d={SHIFTER} strokeWidth={7} strokeDasharray={FAR_SIDE} stroke={on("shifter")} />
+            <path d={PEDAL} strokeWidth={7} stroke={on("rearBrake")} />
+            <path d={GRIP} strokeWidth={20} stroke={on("throttle")} />
+            <path d={LEVER} strokeWidth={7} stroke={on("frontBrake")} />
+            {lit.includes("clutch") && (
+              <path d={LEVER} strokeWidth={7} strokeDasharray={FAR_SIDE} stroke={on("clutch")} />
             )}
+
+            <g
+              className="bike-pose"
+              style={{ transform: `translate(${f(dive.shift.x)}px, ${f(-dive.shift.h)}px)` }}
+            >
+              <g
+                className="bike-spin"
+                style={turning(FRONT_S, motion === "rolling" || motion === "skid", "--spin")}
+              >
+                <Wheel at={A.FRONT_AXLE} r={A.R_FRONT} phase={0.1} />
+              </g>
+              <circle cx={A.FRONT_AXLE.x} cy={Y(A.FRONT_AXLE.h)} r={A.R_DISC_F} strokeWidth={5} opacity={0.85} />
+              <path d={FORK_SLIDER} strokeWidth={13} />
+              <path d={CALIPER} strokeWidth={6} />
+              <path d={FENDER} strokeWidth={6} />
+            </g>
           </g>
-        ))}
+        </g>
       </g>
     </svg>
   );

@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { getCurrentUser, getWaveViewer } from "@/lib/session";
+import { getCurrentUser } from "@/lib/session";
 import { Avatar, type EquippedItem } from "@/components/Avatar";
 import { AvatarCustomizer, type OwnedItem } from "@/components/AvatarCustomizer";
 import { PostCard } from "@/components/PostCard";
@@ -21,7 +21,6 @@ export default async function ProfilePage({
   // The posts below use the same viewer-aware include the feed does, so waves
   // arrive already flipped rather than being patched in on the client.
   const viewer = await getCurrentUser();
-  const waveViewer = await getWaveViewer(viewer);
 
   // A `select`, not an `include`. This is the one query in the app that loads a
   // rider by a handle out of the URL rather than by the session's own id, so an
@@ -42,7 +41,7 @@ export default async function ProfilePage({
       gear: { include: { gearItem: true } },
       posts: {
         orderBy: { createdAt: "desc" },
-        include: postInclude(waveViewer),
+        include: postInclude(viewer?.id ?? null),
       },
       motorcycles: { orderBy: { createdAt: "asc" } },
     },

@@ -32,27 +32,21 @@ model Post {
   @@index([createdAt])
 }
 
-// A rider's wave on a post — this app's "like". The unique pairs below are what
-// make waving idempotent, so a double tap or an offline retry can't inflate the
+// A rider's wave on a post — this app's "like". The unique pair below is what
+// makes waving idempotent, so a double tap or an offline retry can't inflate the
 // count.
 //
-// Exactly one of `userId` / `guestId` is set. `guestId` exists only for the
-// anonymous-waves toggle (NEXT_PUBLIC_ALLOW_ANONYMOUS_WAVES): a signed-out
-// visitor is identified by a random id in a cookie. Both columns are nullable
-// because a unique index treats NULLs as distinct — that's what lets many
-// signed-in rows share `guestId = NULL` and vice versa.
+// `userId` is required: every wave is attributable to an account.
 model Wave {
   id        String   @id @default(cuid())
   postId    String
-  userId    String?
-  guestId   String?
+  userId    String
   createdAt DateTime @default(now())
 
-  post Post  @relation(fields: [postId], references: [id], onDelete: Cascade)
-  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([postId, userId])
-  @@unique([postId, guestId])
   @@index([postId])
 }
 
@@ -281,11 +275,9 @@ model Message {
 // you, while a wave and a comment are two things and get a row each. The badge
 // adds the two counts.
 //
-// Both ends are accounts, enforced here rather than at the call sites: a
-// signed-out visitor can still wave while ANONYMOUS_WAVES_ENABLED is on, and
-// that wave notifies nobody — "someone waved" names nobody and links nowhere.
-// Nothing about the actor is copied onto the row, so a handle change is
-// reflected on read.
+// Both ends are accounts, enforced here rather than at the call sites. Nothing
+// about the actor is copied onto the row, so a handle change is reflected on
+// read.
 model Notification {
   id          String @id @default(cuid())
   recipientId String

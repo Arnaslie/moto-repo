@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Avatar } from "@/components/Avatar";
 import { MAX_MESSAGE_LENGTH, type ConversationSummary, type MessageDTO } from "@moto/core/messages";
 import { timeAgo } from "@moto/core/format";
+import { announceUnreadChanged } from "@/lib/unread-signal";
 
 /* A thread, polled. See ADR 0003, and ADR 0001 for the SSE stream meant to
    replace this: `mergeMessages` being idempotent by id and the cursor being a
@@ -36,9 +37,13 @@ export function Thread({
   const markRead = useCallback(() => {
     fetch(`/api/messages/conversations/${conversation.id}/read`, {
       method: "POST",
-    }).catch(() => {
-      /* the count is cosmetic; a failed clear self-corrects on the next open */
-    });
+    })
+      .then((res) => {
+        if (res.ok) announceUnreadChanged();
+      })
+      .catch(() => {
+        /* the count is cosmetic; a failed clear self-corrects on the next open */
+      });
   }, [conversation.id]);
 
   useEffect(() => {

@@ -1,9 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import type { ConversationSummary } from "@moto/core/messages";
 import {
   markNotificationsRead,
   notificationHref,
@@ -11,47 +9,25 @@ import {
   notificationSentence,
   type NotificationDTO,
 } from "@moto/core/notifications";
+import { announceUnreadChanged } from "@/lib/unread-signal";
 
 /**
- * The dropdown under the wheel (ADR 0007): activity and unread mail in one
- * list, newest first.
+ * The dropdown under the wheel: waves and comments, newest first.
  *
- * Both have to be here because the badge counts both — a panel showing only
- * activity under a wheel reading 3 would be short two rows with no explanation.
+ * Mail used to be listed here too, because the badge counted both. ADR 0012
+ * gave messages their own instrument, so the wheel counts activity alone and
+ * this panel shows only what the wheel is counting.
  */
-
-type Row =
-  | { kind: "activity"; at: string; n: NotificationDTO }
-  | { kind: "mail"; at: string; c: ConversationSummary };
-
-function rowsFrom(
-  notifications: NotificationDTO[],
-  conversations: ConversationSummary[],
-): Row[] {
-  const rows: Row[] = [
-    ...notifications.map((n) => ({ kind: "activity" as const, at: n.createdAt, n })),
-    ...conversations
-      .filter((c) => c.unreadCount > 0)
-      .map((c) => ({ kind: "mail" as const, at: c.lastMessageAt, c })),
-  ];
-  return rows.sort((a, b) => b.at.localeCompare(a.at));
-}
 
 export function NotificationPanel({
   handle,
   onClose,
-  onRead,
 }: {
   handle: string;
   onClose: () => void;
-  /** Lets the wheel drop its count without waiting for the next 20s tick. */
-  onRead: () => void;
 }) {
   const router = useRouter();
-  // Held apart rather than merged once, because only the activity half pages:
-  // mail is every unread conversation and arrives whole.
   const [notifications, setNotifications] = useState<NotificationDTO[] | null>(null);
-  const [conversations, setConversations] = useState<ConversationSummary[]>([]);
   // Null once there is nothing older. The route says so rather than the panel
   // guessing from a short page, which would mean knowing the server's page size.
   const [cursor, setCursor] = useState<string | null>(null);
@@ -62,16 +38,11 @@ export function NotificationPanel({
     let active = true;
     (async () => {
       try {
-        const [a, m] = await Promise.all([
-          fetch("/api/notifications").then((r) =>
-            r.ok ? r.json() : { notifications: [], nextCursor: null },
-          ),
-          fetch("/api/messages/conversations").then((r) => (r.ok ? r.json() : { conversations: [] })),
-        ]);
+        const res = await fetch("/api/notifications");
+        const a = res.ok ? await res.json() : { notifications: [], nextCursor: null };
         if (!active) return;
         setNotifications(a.notifications ?? []);
         setCursor(a.nextCursor ?? null);
-        setConversations(m.conversations ?? []);
       } catch {
         if (active) setNotifications([]);
       }
@@ -98,7 +69,7 @@ export function NotificationPanel({
     }
   }
 
-  const rows = notifications === null ? null : rowsFrom(notifications, conversations);
+  const rows = notifications;
 
   // Same discipline the drivetrain uses, so the two don't fight: it closes on
   // any pointerdown outside its own panel, and this closes on any outside its.
@@ -129,7 +100,7 @@ export function NotificationPanel({
       // so without this the dots, the "Unread." in each label and the mark-all
       // button all stay as they were until the panel is reopened.
       setNotifications((prev) => (prev ? markNotificationsRead(prev, ids) : prev));
-      onRead();
+      announceUnreadChanged();
     } catch {
       /* the next tick corrects the count */
     }
@@ -162,65 +133,40 @@ export function NotificationPanel({
           <div className="px-3 py-5">
             <p className="text-sm font-medium">Nothing waiting.</p>
             <p className="mt-1 text-sm text-black/50 dark:text-white/50">
-              Waves, comments and messages land here.
+              Waves and comments land here.
             </p>
           </div>
         ) : (
           <>
             <ul>
-              {rows.map((row) =>
-                row.kind === "activity" ? (
-                  <li key={`a:${row.n.id}`}>
-                    <button
-                      type="button"
-                      onClick={() => openActivity(row.n)}
-                      // The row's text is assembled from parts so the handle can
-                      // be weighted; the label is the same row as one sentence.
-                      aria-label={`${row.n.readAt ? "" : "Unread. "}${notificationSentence(row.n)}`}
-                      className={rowClass}
-                    >
-                      <span
-                        aria-hidden
-                        className={`mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full ${
-                          row.n.readAt ? "bg-transparent" : "bg-orange-500"
-                        }`}
-                      />
-                      <span className="min-w-0">
-                        <span className="font-medium">@{row.n.actor}</span>{" "}
-                        {notificationLine(row.n).did}
-                        {row.n.quote && (
-                          <span className="block truncate text-black/50 dark:text-white/50">
-                            {row.n.quote}
-                          </span>
-                        )}
-                      </span>
-                    </button>
-                  </li>
-                ) : (
-                  <li key={`m:${row.c.id}`}>
-                    <Link
-                      href={`/messages/${row.c.id}`}
-                      onClick={onClose}
-                      className={rowClass}
-                    >
-                      <span
-                        aria-hidden
-                        className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-orange-500"
-                      />
-                      <span className="min-w-0">
-                        <span className="font-medium">@{row.c.with.handle}</span>{" "}
-                        sent{" "}
-                        {row.c.unreadCount === 1 ? "a message" : `${row.c.unreadCount} messages`}
-                        {row.c.lastMessage && (
-                          <span className="block truncate text-black/50 dark:text-white/50">
-                            {row.c.lastMessage.body}
-                          </span>
-                        )}
-                      </span>
-                    </Link>
-                  </li>
-                ),
-              )}
+              {rows.map((n) => (
+                <li key={n.id}>
+                  <button
+                    type="button"
+                    onClick={() => openActivity(n)}
+                    // The row's text is assembled from parts so the handle can
+                    // be weighted; the label is the same row as one sentence.
+                    aria-label={`${n.readAt ? "" : "Unread. "}${notificationSentence(n)}`}
+                    className={rowClass}
+                  >
+                    <span
+                      aria-hidden
+                      className={`mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full ${
+                        n.readAt ? "bg-transparent" : "bg-orange-500"
+                      }`}
+                    />
+                    <span className="min-w-0">
+                      <span className="font-medium">@{n.actor}</span>{" "}
+                      {notificationLine(n).did}
+                      {n.quote && (
+                        <span className="block truncate text-black/50 dark:text-white/50">
+                          {n.quote}
+                        </span>
+                      )}
+                    </span>
+                  </button>
+                </li>
+              ))}
             </ul>
             {cursor && (
               <button
@@ -236,11 +182,8 @@ export function NotificationPanel({
         )}
       </div>
 
-      <div className="flex items-center justify-between border-t border-black/10 px-3 py-2 text-sm dark:border-white/15">
-        <Link href="/messages" onClick={onClose} className="font-medium hover:text-orange-500">
-          All messages
-        </Link>
-        {rows?.some((r) => r.kind === "activity" && !r.n.readAt) && (
+      {rows?.some((n) => !n.readAt) && (
+        <div className="flex items-center justify-end border-t border-black/10 px-3 py-2 text-sm dark:border-white/15">
           <button
             type="button"
             onClick={() => markRead()}
@@ -248,8 +191,8 @@ export function NotificationPanel({
           >
             Mark all read
           </button>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
