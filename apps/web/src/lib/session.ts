@@ -1,15 +1,8 @@
 import "server-only";
-import { randomUUID } from "node:crypto";
 import { cache } from "react";
 import { getIronSession, type SessionOptions } from "iron-session";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
-import {
-  ANONYMOUS_WAVES_ENABLED,
-  GUEST_WAVE_COOKIE,
-  GUEST_WAVE_COOKIE_MAX_AGE,
-  type WaveViewer,
-} from "@/lib/waves";
 
 export type SessionData = {
   userId?: string;
@@ -76,38 +69,3 @@ export const getCurrentUser = cache(async function getCurrentUser() {
 
   return user;
 });
-
-// The guest id a signed-out visitor waves under. Read-only, so it's safe in a
-// server component. Null means they've never waved, or the toggle is off.
-export async function getGuestWaverId() {
-  if (!ANONYMOUS_WAVES_ENABLED) return null;
-  const cookieStore = await cookies();
-  return cookieStore.get(GUEST_WAVE_COOKIE)?.value ?? null;
-}
-
-// Same, but mints one when it's missing. Writes a cookie, so it is only
-// callable from a route handler or server function.
-export async function ensureGuestWaverId() {
-  const cookieStore = await cookies();
-  const existing = cookieStore.get(GUEST_WAVE_COOKIE)?.value;
-  if (existing) return existing;
-
-  const guestId = randomUUID();
-  cookieStore.set(GUEST_WAVE_COOKIE, guestId, {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    maxAge: GUEST_WAVE_COOKIE_MAX_AGE,
-  });
-  return guestId;
-}
-
-// Who to check waves against for this request. A signed-in rider wins; only a
-// signed-out one falls back to their guest cookie.
-export async function getWaveViewer(
-  user: { id: string } | null,
-): Promise<WaveViewer> {
-  if (user) return { userId: user.id };
-  return { guestId: await getGuestWaverId() };
-}
