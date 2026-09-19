@@ -260,6 +260,8 @@ body {
 
 .leaflet-tooltip.chalk-tip::before {
   display: none;
+}
+
 .odo-ground {
   fill: var(--odo-ground);
   stroke: none;
