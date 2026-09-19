@@ -2,6 +2,29 @@
 # Runs on `git push`; bypass with --no-verify if you really need to.
 set -e
 
+head_sha=$(git rev-parse HEAD)
+
+if [ -n "$(git status --porcelain)" ]; then
+  echo "pre-push: refusing, working tree is not clean." >&2
+  echo "pre-push: the checks below read the tree, so they would not test the commits you are pushing." >&2
+  git status --short >&2
+  exit 1
+fi
+
+while read -r local_ref local_sha remote_ref remote_sha; do
+  case "$local_sha" in
+    *[!0]*) ;;
+    *) continue ;;
+  esac
+  if [ "$local_sha" != "$head_sha" ]; then
+    echo "pre-push: refusing, $local_ref is not HEAD." >&2
+    echo "pre-push:   pushing $local_sha" >&2
+    echo "pre-push:   HEAD is $head_sha" >&2
+    echo "pre-push: the checks below read the tree, so they would test HEAD instead." >&2
+    exit 1
+  fi
+done
+
 echo "pre-push: eslint"
 npm run lint
 
