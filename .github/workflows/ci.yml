@@ -1,0 +1,30 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Build opens no connection: every route is force-dynamic. Placeholders only.
+  DATABASE_URL: postgresql://ci:ci@127.0.0.1:5432/ci
+  DATABASE_URL_UNPOOLED: postgresql://ci:ci@127.0.0.1:5432/ci
+  SESSION_SECRET: ci-placeholder-secret-unused-at-build-time
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run build
