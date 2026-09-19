@@ -22,5 +22,6 @@ editing history — the wrong turns are half of what makes the file worth keepin
 | [0008](./0008-anatomy-diagram.md) | Anatomy, drawn to a real machine | Implemented — page replaced by 0013; the diagram is reused there |
 | [0009](./0009-monorepo-for-mobile.md) | Two workspaces, ahead of a mobile app | Implemented — structure only; no mobile app yet |
 | [0010](./0010-domain-and-environments.md) | A domain, and the environments behind it | Partly implemented — production live on the domain; preview environment not provisioned |
+| [0011](./0011-chalk-road-annotations.md) | Chalk — crowdsourced road annotations on gear 2 | Proposed |
 | [0012](./0012-messages-odometer.md) | The odometer — messages get their own instrument | Proposed |
 | [0013](./0013-trick-catalog.md) | Tricks — a catalog, with the anatomy pointing at the controls | Proposed |
